@@ -84,3 +84,12 @@ La programación de Container Apps Jobs usa UTC; la tarea diaria debe calcular f
 ## Rollback
 
 Los cambios son aditivos. Revertir el bloque elimina los Dockerfiles, `.dockerignore`, el job de build y `output: standalone`; los servicios Render y artefactos actuales no cambian. No hay recursos Azure que revertir porque no se desplegó nada.
+
+## Seguimiento de publicación y preflight de Azure — 2026-11-07
+
+- El repositorio `LUISDACA/azureimmunoclinic` estaba vacío y es público. El snapshot inicial publicado en `main` no tiene padres; no se publicó el historial previo sin auditar.
+- CI inicial: backend tests/Ruff **PASS**; Next tests/lint **PASS**; imagen FastAPI **PASS**.
+- Imagen Next **FAIL** porque el contexto `frontend-next` omitía fixtures sintéticos JSON bajo `docs/ui/fixtures`, que TypeScript necesita durante el build. Se cambió a contexto raíz con Dockerfile explícito y `.dockerignore` que excluye dependencias, artefactos y capturas de UI. Next `build --webpack` local **PASS** tras el cambio; falta confirmar la imagen en la siguiente corrida CI.
+- Flutter CI: **433 PASS / 14 FAIL**, todos en goldens de comunicaciones/contraste con diferencias pixel pequeñas (0.06–0.12%). No se modificó la UI para silenciar esos fallos; Fase 5B conserva su validación manual pendiente.
+- El usuario indica que busca la suscripción Azure for Students y producción. En este entorno `az` y Bicep no están instalados, no hay perfil Azure autenticado ni conector Azure. No se creó ningún recurso.
+- Para provisionar hacen falta una región permitida por la institución, acceso a la suscripción estudiante, resource group y un tope de gasto. T-02/T-03 de Fase 3B siguen PARTIAL; no se migrarán datos institucionales ni se afirmará preparación productiva hasta validarlos y acordar el origen/restauración de datos.

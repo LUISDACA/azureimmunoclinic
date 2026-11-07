@@ -1,13 +1,15 @@
 FROM node:20-alpine AS dependencies
 WORKDIR /app
-COPY package.json package-lock.json ./
+COPY frontend-next/package.json frontend-next/package-lock.json ./
 RUN npm ci
 
 FROM node:20-alpine AS builder
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=dependencies /app/node_modules ./node_modules
-COPY . .
+COPY frontend-next/ ./
+# Next's typecheck includes test sources whose synthetic fixtures live outside the app folder.
+COPY docs/ui/fixtures /docs/ui/fixtures
 RUN npm run build -- --webpack
 
 FROM node:20-alpine AS runner

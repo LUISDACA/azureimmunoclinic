@@ -16,7 +16,7 @@ jobs:
         run: docker build --tag immunoclinic-api:ci backend
 
       - name: Build Next.js BFF image
-        run: docker build --tag immunoclinic-web:ci frontend-next
+        run: docker build --file frontend-next/Dockerfile --tag immunoclinic-web:ci .
 
   backend:
     name: Backend (FastAPI + pytest + ruff)
