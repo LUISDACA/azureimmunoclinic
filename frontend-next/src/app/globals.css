@@ -1,0 +1,213 @@
+@import "tailwindcss";
+
+/* UCC palette — paridad con frontend/lib/core/theme/app_theme.dart */
+:root,
+[data-theme="light"] {
+  --background: #f6fafa;
+  --foreground: #172629;
+
+  --card: #ffffff;
+  --card-foreground: #172629;
+  --surface-variant: #eff7f7;
+
+  --primary: #00afc6;
+  --primary-light: #45d2df;
+  --primary-dark: #007f93;
+  --primary-foreground: #ffffff;
+
+  --accent: #79c143;
+  --accent-light: #a7da64;
+  --accent-foreground: #ffffff;
+  --lime: #d7e91e;
+  --lime-soft: #f2f8b9;
+
+  --secondary: #eff7f7;
+  --secondary-foreground: #172629;
+
+  --muted: #eff7f7;
+  --muted-foreground: #647478;
+
+  --success: #5fae36;
+  --success-light: #eaf6e4;
+  --warning: #e6a700;
+  --warning-light: #fff6d6;
+  --destructive: #c94242;
+  --destructive-foreground: #ffffff;
+  --destructive-light: #ffecec;
+  --info: #008fa3;
+  --info-light: #e2f7fa;
+
+  --brand-gray: #5b5b61;
+  --border: #c7dada;
+  --input: #c7dada;
+  --divider: #ddeaea;
+  --ring: #00afc6;
+  --radius: 0.75rem;
+  /* Foregrounds/actions are independent of the unchanged brand palette. */
+  --action: #007f93;
+  --action-foreground: #ffffff;
+  --interactive-foreground: #006575;
+  --accent-action-foreground: #172629;
+  --success-text: #2f6418;
+  --warning-text: #715100;
+  --destructive-text: #8d2525;
+  --info-text: #006575;
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --background: #071416;
+  --foreground: #eaf7f7;
+  --card: #0e2023;
+  --card-foreground: #eaf7f7;
+  --surface-variant: #142d31;
+  --primary: #45d2df;
+  --primary-foreground: #071416;
+  --accent: #79c143;
+  --accent-foreground: #071416;
+  --secondary: #142d31;
+  --secondary-foreground: #eaf7f7;
+  --muted: #142d31;
+  --muted-foreground: #a8bfc2;
+  --border: #2d4f55;
+  --input: #2d4f55;
+  --divider: #244247;
+  --ring: #45d2df;
+  --success-light: #11341a;
+  --warning-light: #3d2c00;
+  --destructive-light: #3a1313;
+  --info-light: #103237;
+  --action: #45d2df;
+  --action-foreground: #071416;
+  --interactive-foreground: #45d2df;
+  --accent-action-foreground: #071416;
+  --success-text: #a7da64;
+  --warning-text: #e6a700;
+  --destructive-text: #ffaaaa;
+  --info-text: #45d2df;
+  color-scheme: dark;
+}
+
+/* Modo system: sigue al SO solo si no hay override manual */
+@media (prefers-color-scheme: dark) {
+  [data-theme="system"] {
+    --background: #071416;
+    --foreground: #eaf7f7;
+    --card: #0e2023;
+    --card-foreground: #eaf7f7;
+    --surface-variant: #142d31;
+    --primary: #45d2df;
+    --primary-foreground: #071416;
+    --accent: #79c143;
+    --accent-foreground: #071416;
+    --secondary: #142d31;
+    --secondary-foreground: #eaf7f7;
+    --muted: #142d31;
+    --muted-foreground: #a8bfc2;
+    --border: #2d4f55;
+    --input: #2d4f55;
+    --divider: #244247;
+    --ring: #45d2df;
+    --success-light: #11341a;
+    --warning-light: #3d2c00;
+    --destructive-light: #3a1313;
+    --info-light: #103237;
+    --action: #45d2df;
+    --action-foreground: #071416;
+    --interactive-foreground: #45d2df;
+    --accent-action-foreground: #071416;
+    --success-text: #a7da64;
+    --warning-text: #e6a700;
+    --destructive-text: #ffaaaa;
+    --info-text: #45d2df;
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-geist-mono);
+}
+
+* {
+  border-color: var(--border);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), Inter, Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.ucc-soft-gradient {
+  background-image: linear-gradient(135deg, #eafbfc 0%, #f5fbee 100%);
+}
+
+/* Login follows the Flutter card composition; the other auth pages keep the shared brand header. */
+.auth-layout-shell:has(.auth-login-card) {
+  padding: 24px;
+}
+
+.auth-layout-content:has(.auth-login-card) {
+  max-width: 460px;
+}
+
+.auth-layout-content:has(.auth-login-card) > .auth-brand-header {
+  display: none;
+}
+
+.auth-login-field .auth-floating-label {
+  position: absolute;
+  top: 50%;
+  left: 2.5rem;
+  z-index: 1;
+  transform: translateY(-50%);
+  background: var(--card);
+  padding: 0 0.25rem;
+  color: var(--muted-foreground);
+  pointer-events: none;
+  transition: top 120ms ease, color 120ms ease, font-size 120ms ease;
+}
+
+.auth-floating-field:focus-within .auth-floating-label,
+.auth-floating-field[data-filled="true"] .auth-floating-label {
+  top: 0;
+  color: var(--primary);
+  font-size: 0.75rem;
+}
+
+[data-theme="dark"] .ucc-soft-gradient {
+  background-image: linear-gradient(135deg, #061a1d 0%, #10200e 100%);
+}
+@media (prefers-color-scheme: dark) {
+  [data-theme="system"] .ucc-soft-gradient {
+    background-image: linear-gradient(135deg, #061a1d 0%, #10200e 100%);
+  }
+}
+
+.ucc-brand-gradient {
+  background-image: linear-gradient(
+    135deg,
+    var(--primary-dark) 0%,
+    var(--primary) 50%,
+    var(--accent) 100%
+  );
+}
