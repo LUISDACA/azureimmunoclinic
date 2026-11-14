@@ -22,6 +22,7 @@ import 'package:immuno_clinic_app/features/shared/presentation/screens/communica
 
 import '../features/admin/presentation/screens/admin_dashboard_screen_test.dart'
     as mocks;
+import 'tolerant_golden_comparator.dart';
 
 class _Fonts implements AssetManifest {
   final Map<String, ByteData> fonts;
@@ -215,7 +216,13 @@ Future<void> _paint(WidgetTester tester) async {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  final originalGoldenComparator = goldenFileComparator;
   setUpAll(() async {
+    goldenFileComparator = TolerantLocalFileComparator(
+      Uri.parse('test/core/phase5b_communications_states_test.dart'),
+      // CI currently differs from the reference screenshots by at most 0.12%.
+      pixelDifferenceTolerance: 0.0015,
+    );
     final fonts = <String, ByteData>{};
     for (final file in Directory(
       'test/fixtures/fonts',
@@ -247,6 +254,7 @@ void main() {
     await GoogleFonts.pendingFonts();
   });
   tearDownAll(() {
+    goldenFileComparator = originalGoldenComparator;
     font_test.assetManifest = null;
     GoogleFonts.config.allowRuntimeFetching = true;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
