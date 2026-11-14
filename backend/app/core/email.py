@@ -1,13 +1,16 @@
 """Production-ready email service using aiosmtplib and Jinja2 templates."""
 
 import logging
+import re
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from enum import StrEnum
+from html import unescape
 from pathlib import Path
 from urllib.parse import quote
 
 import aiosmtplib
+import anyio
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from app.core.config import settings
@@ -29,13 +32,87 @@ class EmailDeliveryStatus(StrEnum):
     FAILED = "failed"
 
 
+def _azure_communication_email_payload(
+    subject: str,
+    recipient: str,
+    html_content: str,
+) -> dict:
+    """Build an ACS payload without putting recipient or content in logs."""
+    plain_text = unescape(re.sub(r"<[^>]+>", " ", html_content))
+    plain_text = re.sub(r"\s+", " ", plain_text).strip()
+    return {
+        "senderAddress": settings.AZURE_COMMUNICATION_EMAIL_SENDER,
+        "recipients": {"to": [{"address": recipient}]},
+        "content": {
+            "subject": subject,
+            "plainText": plain_text,
+            "html": html_content,
+        },
+    }
+
+
+def _send_azure_communication_email_sync(endpoint: str, message: dict) -> str:
+    """Send through ACS using the App Service managed identity."""
+    from azure.communication.email import EmailClient
+    from azure.identity import DefaultAzureCredential
+
+    credential = DefaultAzureCredential()
+    client = None
+    try:
+        client = EmailClient(endpoint, credential)
+        poller = client.begin_send(message)
+        result = poller.result(timeout=settings.AZURE_COMMUNICATION_EMAIL_TIMEOUT_SECONDS)
+        return str(result.get("status", ""))
+    finally:
+        try:
+            if client is not None:
+                client.close()
+        finally:
+            credential.close()
+
+
+async def _send_azure_communication_email(
+    subject: str,
+    recipient: str,
+    html_content: str,
+) -> EmailDeliveryStatus:
+    endpoint = settings.AZURE_COMMUNICATION_EMAIL_ENDPOINT
+    sender = settings.AZURE_COMMUNICATION_EMAIL_SENDER
+    if not endpoint or not sender:
+        logger.error(
+            "Email provider configuration incomplete; transport=azure_communication_services"
+        )
+        return EmailDeliveryStatus.FAILED
+
+    message = _azure_communication_email_payload(subject, recipient, html_content)
+    try:
+        status = await anyio.to_thread.run_sync(
+            _send_azure_communication_email_sync,
+            endpoint,
+            message,
+        )
+        if status != "Succeeded":
+            logger.error(
+                "Email provider did not accept message; transport=azure_communication_services"
+            )
+            return EmailDeliveryStatus.FAILED
+        logger.info("Email accepted; transport=azure_communication_services")
+        return EmailDeliveryStatus.ACCEPTED
+    except Exception as exc:
+        logger.error(
+            "Email provider failed; transport=azure_communication_services error=%s",
+            type(exc).__name__,
+        )
+        return EmailDeliveryStatus.FAILED
+
+
 async def send_email(
     subject: str,
     recipient: str,
     template_name: str,
     context: dict,
 ) -> EmailDeliveryStatus:
-    """Send an HTML email using SendGrid API or SMTP."""
+    """Send an HTML email using Azure Communication Services, SendGrid, or SMTP."""
     if not settings.EMAIL_ENABLED:
         logger.warning("Email disabled; template=%s", template_name)
         return EmailDeliveryStatus.DISABLED
@@ -46,6 +123,15 @@ async def send_email(
     except Exception:
         logger.error("Email rendering failed; template=%s", template_name)
         return EmailDeliveryStatus.FAILED
+
+    # ACS is selected explicitly by endpoint configuration and uses managed identity.
+    # Do not fall through to a different transport if this configured provider fails.
+    if settings.AZURE_COMMUNICATION_EMAIL_ENDPOINT or settings.AZURE_COMMUNICATION_EMAIL_SENDER:
+        return await _send_azure_communication_email(
+            subject,
+            recipient,
+            html_content,
+        )
 
     # 1. Try SendGrid API first if key is present
     if settings.SENDGRID_API_KEY:
@@ -134,6 +220,28 @@ async def send_account_created_email(
             "email": email,
             "temporary_password": temporary_password,
             "app_name": settings.APP_NAME,
+            "login_url": f"{settings.FRONTEND_URL.rstrip('/')}/login",
+        },
+    )
+
+
+async def send_admin_account_created_email(
+    email: str,
+    *,
+    full_name: str,
+    temporary_password: str,
+) -> EmailDeliveryStatus:
+    """Send first-login instructions to a newly-created normal administrator."""
+    return await send_email(
+        subject="Tu cuenta de administrador de ImmunoClinic ha sido creada",
+        recipient=email,
+        template_name="admin_account_created.html",
+        context={
+            "full_name": full_name,
+            "email": email,
+            "temporary_password": temporary_password,
+            "app_name": settings.APP_NAME,
+            "login_url": f"{settings.FRONTEND_URL.rstrip('/')}/login",
         },
     )
 

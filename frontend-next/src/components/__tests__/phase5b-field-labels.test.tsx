@@ -47,10 +47,10 @@ it('create labels include required, date, sex and import fields with unique IDs'
   expect(screen.getByLabelText('Fecha de nacimiento')).toHaveAttribute('type', 'date');
 });
 
-it('administrator creation labels focus fields and retain required/password attributes', async () => {
+it('administrator creation labels focus fields and does not expose an initial password input', async () => {
   mount(<Admins />); const user = userEvent.setup(); await user.click(await screen.findByRole('button', { name: 'Crear admin' }));
-  await checkLabels(['Correo *', 'Contraseña *', 'Nombres', 'Apellidos', 'Cargo', 'Programa *', 'Campus *']);
-  expect(screen.getByLabelText('Contraseña *')).toHaveAttribute('type', 'password');
+  await checkLabels(['Correo *', 'Nombres', 'Apellidos', 'Cargo', 'Programa *', 'Campus *']);
+  expect(screen.queryByLabelText('Contraseña *')).not.toBeInTheDocument();
   expect(screen.getByLabelText('Programa *')).toBeRequired();
 });
 

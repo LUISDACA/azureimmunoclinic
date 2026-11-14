@@ -69,7 +69,6 @@ export interface UpdateStudentProfileRequest {
 
 export interface CreateAdminRequest {
   email: string;
-  password: string;
   first_name?: string;
   last_name?: string;
   job_title?: string;

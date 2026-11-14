@@ -1,9 +1,11 @@
 """Workflows for app-admin managed administrator accounts."""
 
+import secrets
 import uuid
 
 from app.common.access import is_app_admin
 from app.common.enums import AuditAction, Gender, Role
+from app.core.email import send_admin_account_created_email
 from app.core.exceptions import (
     BadRequestException,
     ConflictException,
@@ -43,18 +45,22 @@ class AdminAccountService:
         if existing:
             raise ConflictException(f"Ya existe un usuario con el correo {data.email}")
 
+        temporary_password = data.password or (secrets.token_urlsafe(24) + "Aa1!")
         admin = User(
             email=data.email,
-            hashed_password=hash_password(data.password),
+            hashed_password=hash_password(temporary_password),
             role=Role.ADMIN,
             is_active=True,
+            must_change_password=True,
         )
         admin = await self.user_repo.create_user(admin)
+        first_name = data.first_name or _fallback_first_name(str(data.email))
+        last_name = data.last_name or ""
         await self.user_repo.create_profile(
             Profile(
                 user_id=admin.id,
-                first_name=data.first_name or _fallback_first_name(str(data.email)),
-                last_name=data.last_name or "",
+                first_name=first_name,
+                last_name=last_name,
                 job_title=data.job_title,
                 sex=Gender.MALE,
                 program=data.program,
@@ -75,6 +81,11 @@ class AdminAccountService:
         )
 
         await self.db.commit()
+        await send_admin_account_created_email(
+            admin.email,
+            full_name=f"{first_name} {last_name}".strip(),
+            temporary_password=temporary_password,
+        )
         return await self.user_repo.get_by_id(admin.id)
 
     async def list_admins(self, app_admin: User) -> list[User]:

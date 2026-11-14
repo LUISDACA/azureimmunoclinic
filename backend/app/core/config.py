@@ -37,6 +37,8 @@ class Settings(BaseSettings):
     S3_ACCESS_KEY: str | None = None
     S3_SECRET_KEY: str | None = None
     S3_BUCKET: str | None = None
+    AZURE_STORAGE_ACCOUNT_URL: str | None = None
+    AZURE_STORAGE_CONTAINER: str | None = None
 
     # ── Email ─────────────────────────────────────────────────────────
     SMTP_HOST: str = "localhost"
@@ -46,6 +48,9 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str = ""
     SMTP_FROM: str = "noreply@immunoclinic.local"
     SENDGRID_API_KEY: str | None = None
+    AZURE_COMMUNICATION_EMAIL_ENDPOINT: str | None = None
+    AZURE_COMMUNICATION_EMAIL_SENDER: str | None = None
+    AZURE_COMMUNICATION_EMAIL_TIMEOUT_SECONDS: float = 60.0
     EMAIL_ENABLED: bool = False
 
     # Push notifications
@@ -56,6 +61,7 @@ class Settings(BaseSettings):
     VACCINE_REMINDER_INTERVAL_SECONDS: int = 86400
     VACCINE_EMAIL_REMINDER_DAYS: str = "3,2,1,0"
     CRON_SECRET: str | None = None
+    STARTUP_BOOTSTRAP_ENABLED: bool = True
 
     # ── App ───────────────────────────────────────────────────────────
     APP_NAME: str = "ImmunoClinic"

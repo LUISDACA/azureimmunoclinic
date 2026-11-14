@@ -1,6 +1,6 @@
 # Preparación para validar T-02 y T-03
 
-Fecha: 2026-09-28
+Fecha: 2026-11-07 (actualización de verificación)
 Estado: **T-02 = PARTIAL; T-03 = PARTIAL. Fase 3B permanece PARTIAL.**
 Alcance: crear infraestructura repetible y pruebas sintéticas locales. No se utilizaron, conectaron ni incluyeron datos institucionales reales. Los resultados sintéticos demuestran comportamiento de la herramienta y del código bajo fixtures; no prueban conservación ni clasificación de registros institucionales.
 
@@ -29,6 +29,8 @@ No se debe copiar un dataset real a los fixtures del repositorio. La validación
 | `backend/tests/fixtures/t02_profile_changes.json` | Cambios de sexo, programa y campus, con los valores sintéticos esperados | Parámetros de pruebas de reconciliación de perfil. |
 | `test_admin_vaccine_catalog.py::test_catalog_changes_append_immutable_scheme_versions` | v1 → catálogo actualizado → v2 | Compara etiquetas/configuración y asignaciones activas; comprueba que el snapshot anterior y la fecha/estado de dosis aplicada se conservan. |
 | `test_admin_vaccine_catalog.py::test_schedule_rule_change_versions_existing_student_schemes` | v1 → regla actualizada → v2 | Comprueba reglas anteriores/nuevas y activación de la regla vigente. |
+| `test_phase3b_validation_postgres.py::test_postgres_catalog_change_keeps_old_snapshot_and_clinical_history` | v1 → cambio de catálogo → v2 sobre PostgreSQL | Verifica snapshot histórico, dosis aplicada, titulación, revisión, nueva configuración activa y dosis añadida. |
+| `test_phase3b_validation_postgres.py::test_postgres_rule_change_appends_version_without_rewriting_history` | v1 → cambio de regla → v2 sobre PostgreSQL | Verifica la regla anterior en el snapshot histórico y la nueva regla activa en v2. |
 | `test_admin_integration.py::test_each_profile_reconciliation_preserves_snapshot_and_clinical_history` | Sexo, programa y campus, cada uno como caso separado | Dosis fechada, titulación, estado, nota y reviewer sobreviven; snapshots before/after existen y la fila v1 se vuelve a leer intacta. |
 | `backend/tests/fixtures/t03_legacy_before.json` y `t03_legacy_after.json` | Dosis antiguas, evidencia `uploaded`/`reviewed`, titulación, `pending`/`under_review`, fechas antiguas y bisiestas, campos parciales | Par sintético sin cambios para demostrar una comparación limpia; no representa datos de producción. |
 | `test_legacy_dataset_validator.py` | pérdida, cambio de estado, fecha, reviewer, duplicados, asociaciones entre dueños y cambio de elegibilidad | Prueba códigos de hallazgo y que el reporte no filtre valores/IDs. |
@@ -72,7 +74,7 @@ Los puntos suspensivos son valores de ejemplo de estructura, no valores que deba
 1. Valida la versión del formato y normaliza cada grupo por `id`; reporta ID ausente o duplicado.
 2. Compara los conjuntos de IDs antes/después; reporta pérdida y adición.
 3. Compara cada campo de IDs coincidentes, incluyendo presencia/nullability, y emite códigos específicos para estado, fecha de aplicación, reviewer, fecha de revisión, asociación y elegibilidad; valores no se incluyen en el reporte.
-4. Busca dosis repetidas por (`owner_id`, `assignment_id`, `dose_number`).
+4. Busca dosis repetidas por (`owner_id`, `assignment_id`, `dose_number`) solo cuando la clave está completa; filas legacy incompletas no se marcan como duplicadas por compartir valores nulos. El conteo del reporte conserva todas las filas fuente incluso si hay IDs duplicados.
 5. Comprueba que las asignaciones de dosis existan y pertenezcan al mismo owner, y que una evidencia vinculada apunte a una dosis existente del mismo owner.
 6. Devuelve conteos por grupo, `valid`, códigos de problema y fingerprints HMAC por ejecución. Nunca escribe ni modifica las entradas.
 
@@ -87,21 +89,43 @@ Los puntos suspensivos son valores de ejemplo de estructura, no valores que deba
 - para T-02, muestras de auditoría de cada una de las cinco clases de cambio y confirmación de snapshot v1/historial retenido;
 - para T-03, clasificación humana de cada valor legacy ambiguo; el validador no debe convertir `reviewed` a APROBADO ni asignar evidencias a dosis por heurística.
 
-### Evidencia de infraestructura en esta preparación
+### Evidencia de infraestructura sintética
 
-- Casos sintéticos focalizados T-02/T-03: **14 passed**.
-- Reconciliación sintética de sexo/programa/campus sobre PostgreSQL: **3 passed**.
-- Suite completa backend sobre PostgreSQL local desechable y bases migratorias vacías: **348 passed, 7 warnings**; incluye migraciones, concurrencia y E2E.
-- E2E clínico `tests/test_phase1_e2e.py` sobre PostgreSQL: **7 passed**.
-- Smoke del CLI comparando los fixtures T-03: **PASS**, `valid: true`, 0 hallazgos y sin valores de filas en salida.
-- Ruff check/format: **PASS**, 142 archivos verificados. `git diff --check`: **PASS** en la revisión final.
+Ejecuciones actuales del 2026-11-07. Todas usaron datos sintéticos y PostgreSQL 18.6 local desechable. No se conectó ningún servicio ni dataset institucional.
 
-Esto no cambia T-02/T-03 a DONE. No se generó migración ni se conectaron bases con datos institucionales.
+| Área | Verificación | Resultado |
+|---|---|---|
+| T-02/T-03 focalizados en PostgreSQL | `pytest tests/test_phase3b_validation_postgres.py tests/test_legacy_dataset_validator.py -q` con `PHASE1_INTEGRATION_URL` local | **19 passed**: 5 escenarios de versionado PostgreSQL (catálogo, reglas, sexo, programa, campus) y 14 casos del comparador/fixtures. |
+| Reconciliaciones existentes | `pytest tests/test_admin_vaccine_catalog.py tests/test_admin_integration.py -k 'catalog_changes_append_immutable_scheme_versions or schedule_rule_change_versions_existing_student_schemes or each_profile_reconciliation_preserves_snapshot_and_clinical_history' -q` | **5 passed**, SQLite. |
+| Backend completo | `pytest -q` con `PHASE1_INTEGRATION_URL` local | **404 passed, 24 skipped, 7 warnings**. Los skips no se cuentan como aprobados. |
+| Migración de archivo/esquema | `pytest tests/test_phase1_migration.py -q` con base PostgreSQL sintética vacía | **1 passed**; migración aplicada dos veces y verificadas conservación/concurrencia. |
+| Migración de sesiones | `pytest tests/test_phase2_migration.py -q` con base PostgreSQL sintética vacía | **1 passed**; conserva credenciales/tokens legacy y aplica dos veces la migración. |
+| E2E clínico | `pytest -q tests/test_phase1_e2e.py` con `PHASE1_INTEGRATION_URL` local | **11 passed** sobre PostgreSQL sintético. |
+| CLI T-03 | Comparación de los fixtures `t03_legacy_before.json` / `t03_legacy_after.json` | **PASS**, `valid: true`, conteos coincidentes, 0 hallazgos; salida sin valores de filas. |
+| Lint y formato | Ruff en los tres archivos Python afectados | **PASS**. |
+
+El backend reportó advertencias existentes de SQLAlchemy (`noload`) y Firebase (`MulticastMessage.tokens`); pytest-asyncio advierte que el loop scope no está fijado. Ninguna advertencia falló la ejecución.
+
+La revisión actual endureció el comparador: las filas parcialmente completas ya no se clasifican como duplicadas cuando les falta parte de la clave semántica y los conteos incluyen todas las filas fuente aunque haya IDs duplicados. No se modificaron reglas clínicas ni se generó una migración. La instancia temporal y sus datos sintéticos no validan comportamiento institucional.
+
+Las ejecuciones sintéticas no cambian T-02/T-03 a DONE.
 
 ## Condiciones de cierre
 
 - **T-02 permanece PARTIAL** hasta obtener evidencia autorizada de los cinco tipos de reconciliación sobre el dataset institucional aprobado, con histórico v1 intacto, estado/configuración nueva correcta, revisión de dosis/titulaciones conservadas y diferencias triageadas.
 - **T-03 permanece PARTIAL** hasta ejecutar el comparador en exports institucionales autorizados, resolver cada hallazgo con decisión humana y demostrar que ninguna pérdida, mutación de estado/fecha/revisión, duplicado, asociación incorrecta o cambio inesperado de elegibilidad queda sin explicación aprobada.
+- Para iniciar esa validación hacen falta autorización institucional escrita del dataset y su custodio/entorno, exports BEFORE/AFTER aprobados y seudonimizados fuera del repositorio, manifiestos de conteos, versión backend objetivo y clasificación humana de diferencias ambiguas. Esos insumos no están en el workspace actual.
 - Los fixtures y tests sintéticos permanecen como arnés de regresión. Nunca cuentan por sí solos como validación institucional ni como cierre de Fase 3B.
 
-No se modificaron reglas clínicas; no se implementaron PDF, QR, Maps ni Azure. No se hizo commit.
+## Entorno para ensayo institucional futuro — 2026-11-10
+
+Se aprovisionó un entorno aislado de Azure for Students en Brazil South para preparar la prueba autorizada. Tiene FastAPI, PostgreSQL Flexible Server privado y Blob privado; el despliegue y sus límites están detallados en `docs/audits/phase6-azure-readiness.md`.
+
+- No hay dataset institucional cargado ni export recibido en el workspace.
+- La API devolvió HTTP 200 (`status: healthy`) después de corregir el comando de arranque y deshabilitar bootstrap. Se verificaron login/logout HTTP 200 con la cuenta bootstrap sintética; los tokens se descartaron.
+- La IP de la estación cambió; se renovó MFA y se actualizaron las reglas de App Service y SCM. La IP actual está permitida y el default permanece `Deny`; otras estaciones no tienen acceso.
+- Este despliegue no constituye evidencia para los invariantes T-02/T-03. **T-02 = PARTIAL; T-03 = PARTIAL.**
+
+Para una sesión futura, renovar la autenticación Azure si expiró y actualizar solo la allowlist `/32` si cambia la IP de la estación autorizada. Antes de cargar un export institucional aprobado, confirmar con el custodio el origen, autorización, retención y procedimiento de eliminación. Mantener originales y resultados fuera del repositorio; ejecutar el comparador con IDs seudónimos, manifiestos de conteo y revisión humana de cada diferencia. No hay export recibido ni cargado en este entorno.
+
+No se modificaron reglas clínicas; no se implementaron PDF, QR ni Maps. Se preparó un entorno Azure aislado sin datos institucionales. No se hizo commit.

@@ -2,9 +2,25 @@
 import { randomBytes } from "node:crypto";
 import { beforeAll, afterAll, expect, it } from "vitest";
 import { Pool } from "pg";
-import { csrf, validCsrf, seal, unseal, store, locked, replace, database, type TokenPair } from "../session";
+import { parse } from "pg-connection-string";
+import { csrf, validCsrf, seal, unseal, store, locked, replace, database, normalizeDatabaseUrl, type TokenPair } from "../session";
 const pair: TokenPair = { access_token: 'synthetic-access', refresh_token: 'synthetic-refresh', session_id: '00000000-0000-0000-0000-000000000001', expires_in: 60, refresh_expires_in: 3600, must_change_password: false, access_until: Date.now()+60000 };
 beforeAll(() => { process.env.BFF_SESSION_KEY = randomBytes(32).toString('base64'); });
+it('normalizes the SQLAlchemy PostgreSQL URL and maps ssl=require to node-postgres sslmode', () => {
+  const normalized = normalizeDatabaseUrl('postgresql+asyncpg://synthetic:fixture-password@db.example.invalid:5432/immunoclinic?ssl=require');
+  const options = parse(normalized);
+  expect(new URL(normalized).protocol).toBe('postgresql:');
+  expect(new URL(normalized).searchParams.get('ssl')).toBeNull();
+  expect(new URL(normalized).searchParams.get('sslmode')).toBe('require');
+  expect(typeof options.ssl).toBe('object');
+  expect(options.sslmode).toBe('require');
+});
+it('preserves an explicit sslmode and leaves URLs without the legacy ssl option intact', () => {
+  const normalized = normalizeDatabaseUrl('postgresql://synthetic:fixture-password@db.example.invalid:5432/immunoclinic?ssl=require&sslmode=verify-full');
+  expect(new URL(normalized).searchParams.get('ssl')).toBeNull();
+  expect(new URL(normalized).searchParams.get('sslmode')).toBe('verify-full');
+  expect(normalizeDatabaseUrl('postgresql://synthetic:fixture-password@db.example.invalid:5432/immunoclinic')).toBe('postgresql://synthetic:fixture-password@db.example.invalid:5432/immunoclinic');
+});
 it('encrypts the pair and rejects tampering', () => {
   const encrypted = seal(pair);
   expect(encrypted).not.toContain(pair.refresh_token);

@@ -135,6 +135,14 @@ def compare_legacy_exports(before: dict[str, Any], after: dict[str, Any]) -> dic
     semantic_dose_keys = Counter(
         (row.get("owner_id"), row.get("assignment_id"), row.get("dose_number"))
         for row in after_doses.values()
+        if all(
+            value not in (None, "")
+            for value in (
+                row.get("owner_id"),
+                row.get("assignment_id"),
+                row.get("dose_number"),
+            )
+        )
     )
     for key, count in semantic_dose_keys.items():
         if count > 1:
@@ -188,8 +196,10 @@ def compare_legacy_exports(before: dict[str, Any], after: dict[str, Any]) -> dic
 
     return {
         "valid": not issues,
-        "before_counts": {group: len(before_rows[group]) for group in RECORD_GROUPS},
-        "after_counts": {group: len(after_rows[group]) for group in RECORD_GROUPS},
+        # Count source rows, including duplicates; indexing by ID intentionally
+        # collapses those rows so that it can report the collision separately.
+        "before_counts": {group: len(_records(before, group)) for group in RECORD_GROUPS},
+        "after_counts": {group: len(_records(after, group)) for group in RECORD_GROUPS},
         "issue_count": len(issues),
         "issues": issues,
     }

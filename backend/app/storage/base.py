@@ -5,6 +5,7 @@ import os
 import uuid
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
+from functools import lru_cache
 from pathlib import Path
 
 import aiofiles
@@ -137,4 +138,16 @@ def get_storage_service() -> StorageService:
     """Factory that returns the storage service selected by configuration."""
     if settings.STORAGE_TYPE == "s3":
         return S3StorageService()
-    return LocalStorageService()
+    if settings.STORAGE_TYPE == "azure_blob":
+        return _get_azure_blob_storage_service()
+    if settings.STORAGE_TYPE == "local":
+        return LocalStorageService()
+    raise BadRequestException("STORAGE_TYPE must be local, s3, or azure_blob")
+
+
+@lru_cache(maxsize=1)
+def _get_azure_blob_storage_service() -> StorageService:
+    """Reuse the credential chain and SDK client for this process."""
+    from app.storage.azure_blob import AzureBlobStorageService
+
+    return AzureBlobStorageService()

@@ -48,7 +48,10 @@
     <div class="content">
         <h2>Hola {{ full_name }},</h2>
         <p>Tu cuenta en <strong>{{ app_name }}</strong> ha sido creada.</p>
-        <p>Ya puedes ingresar a la aplicacion para revisar y completar tu esquema de vacunacion.</p>
+        <p>Ya puedes ingresar a la aplicacion para revisar y completar tu esquema de vacunacion:</p>
+        <p><a href="{{ login_url }}">Ingresar a ImmunoClinic</a></p>
+        <p>Si el enlace no abre, copia esta dirección en tu navegador:</p>
+        <p><a href="{{ login_url }}">{{ login_url }}</a></p>
 
         <div class="credentials">
             <p><strong>Usuario:</strong> {{ email }}</p>

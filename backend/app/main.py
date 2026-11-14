@@ -69,6 +69,14 @@ _SAFE_ERROR_MESSAGES = {
 }
 
 
+async def _run_startup_bootstrap(session: AsyncSession) -> None:
+    """Seed initial data only when explicitly enabled for this deployment."""
+    if not settings.STARTUP_BOOTSTRAP_ENABLED:
+        return
+    await seed_vaccines(session)
+    await seed_admin_user(session)
+
+
 def _api_error(
     status_code: int,
     detail=None,
@@ -95,10 +103,9 @@ def _api_error(
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Application lifecycle — run seeds on startup."""
+    """Application lifecycle — optionally bootstrap data and run maintenance."""
     async with AsyncSessionLocal() as session:
-        await seed_vaccines(session)
-        await seed_admin_user(session)
+        await _run_startup_bootstrap(session)
         deleted = await AuthRepository(session).delete_expired_tokens()
         await session.commit()
         if deleted:

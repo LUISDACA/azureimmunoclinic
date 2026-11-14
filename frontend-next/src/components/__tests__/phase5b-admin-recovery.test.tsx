@@ -29,7 +29,7 @@ async function draft() {
   await screen.findByText(admin.email);
   await userEvent.click(screen.getByRole('button', { name: 'Crear admin' }));
   await screen.findByLabelText('Programa *');
-  for (const [label,value] of [['Correo *','new-admin@example.com'],['Contraseña *','SyntheticOnly123!'],['Programa *','Enfermería'],['Campus *','Bogotá']]) fireEvent.change(screen.getByLabelText(label), {target:{value}});
+  for (const [label,value] of [['Correo *','new-admin@example.com'],['Programa *','Enfermería'],['Campus *','Bogotá']]) fireEvent.change(screen.getByLabelText(label), {target:{value}});
 }
 async function write(kind:'create'|'remove') {
   if (kind === 'create') { await draft(); await userEvent.click(screen.getByRole('button', {name:'Crear'})); }
@@ -95,7 +95,7 @@ for (const kind of ['create','remove'] as const) {
       const retry=screen.getByRole('button',{name:'Reintentar'});fireEvent.click(retry);fireEvent.click(retry);
       await waitFor(()=>expect(listAdmins).toHaveBeenCalledTimes(before+1));expect(retry).toBeDisabled();
       await act(async()=>{read.resolve([admin]);});await screen.findByText(admin.email);expect(screen.queryByText(confirmed[kind])).not.toBeInTheDocument();expect(mutation).toHaveBeenCalledTimes(1);
-      if(kind==='create'){fireEvent.click(screen.getByRole('button',{name:'Crear admin'}));expect(screen.getByLabelText('Contraseña *')).toHaveValue('');}
+      if(kind==='create'){fireEvent.click(screen.getByRole('button',{name:'Crear admin'}));expect(screen.queryByLabelText('Contraseña *')).not.toBeInTheDocument();}
     });
   }
   it(`${kind} failed plus GET failure is not confirmed; recovery does not resubmit`, async () => {

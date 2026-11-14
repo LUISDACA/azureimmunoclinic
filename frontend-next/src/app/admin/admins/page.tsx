@@ -30,7 +30,6 @@ import { Select } from "@/components/ui/select";
 
 const EMPTY: CreateAdminRequest = {
   email: "",
-  password: "",
   program: "",
   campus: "",
 };
@@ -145,7 +144,6 @@ export default function AdminManagementPage() {
                 if (busy || !readable || !event.currentTarget.reportValidity()) return;
                 const payload: CreateAdminRequest = {
                   email: form.email.trim(),
-                  password: form.password,
                   program: form.program.trim(),
                   campus: form.campus.trim(),
                 };
@@ -163,14 +161,6 @@ export default function AdminManagementPage() {
                   required
                   value={form.email}
                   onChange={(v) => setForm({ ...form, email: v })}
-                />
-                <Field
-                  label="Contraseña"
-                  type="password"
-                  required
-                  minLength={8}
-                  value={form.password}
-                  onChange={(v) => setForm({ ...form, password: v })}
                 />
                 <Field
                   label="Nombres"
@@ -204,6 +194,9 @@ export default function AdminManagementPage() {
                   value={form.campus}
                   onChange={(v) => setForm({ ...form, campus: v })}
                 />
+                <p className="text-sm text-muted-foreground sm:col-span-2">
+                  Se generará una contraseña temporal y se enviará a este correo. El administrador deberá cambiarla al iniciar sesión.
+                </p>
                 <div className="sm:col-span-2">
                   <Button type="submit" disabled={busy}>
                     {create.isPending ? "Creando…" : "Crear"}

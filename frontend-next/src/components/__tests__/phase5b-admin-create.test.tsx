@@ -30,7 +30,6 @@ async function mount() {
 }
 async function fill() {
   fireEvent.change(screen.getByLabelText('Correo *'), { target: { value: 'new-admin@example.invalid' } });
-  fireEvent.change(screen.getByLabelText('Contraseña *'), { target: { value: 'SyntheticOnly123!' } });
   fireEvent.change(screen.getByLabelText('Programa *'), { target: { value: 'Enfermería' } });
   fireEvent.change(screen.getByLabelText('Campus *'), { target: { value: 'Bogotá' } });
 }
@@ -54,10 +53,11 @@ it('malformed email is stopped by native form validation', async () => {
   await userEvent.click(screen.getByRole('button', { name: 'Crear' }));
   expect(createAdmin).not.toHaveBeenCalled();
 });
-it('uses a named native form and backend length constraints without making optional names required', async () => {
+it('uses a named native form without asking for an initial password', async () => {
   await mount();
   expect(screen.getByRole('form', { name: 'Nuevo administrador' })).toContainElement(screen.getByRole('button', { name: 'Crear' }));
-  expect(screen.getByLabelText('Contraseña *')).toHaveAttribute('minlength', '8');
+  expect(screen.queryByLabelText('Contraseña *')).not.toBeInTheDocument();
+  expect(screen.getByText('Se generará una contraseña temporal y se enviará a este correo. El administrador deberá cambiarla al iniciar sesión.')).toBeInTheDocument();
   for (const label of ['Nombres', 'Apellidos']) {
     expect(screen.getByLabelText(label)).not.toBeRequired();
     expect(screen.getByLabelText(label)).toHaveAttribute('maxlength', '100');
@@ -70,7 +70,7 @@ it('Enter submits exactly one valid payload through POST creation', async () => 
   await mount(); await fill();
   screen.getByLabelText('Cargo').focus(); await userEvent.keyboard('{Enter}');
   await waitFor(() => expect(createAdmin).toHaveBeenCalledTimes(1));
-  expect(createAdmin).toHaveBeenCalledWith({ email: 'new-admin@example.invalid', password: 'SyntheticOnly123!', program: 'Enfermería', campus: 'Bogotá' });
+  expect(createAdmin).toHaveBeenCalledWith({ email: 'new-admin@example.invalid', program: 'Enfermería', campus: 'Bogotá' });
   expect(deleteAdmin).not.toHaveBeenCalled();
 });
 it('omits optional names cleared by the user instead of sending invalid empty strings', async () => {
@@ -81,23 +81,23 @@ it('omits optional names cleared by the user instead of sending invalid empty st
   }
   await userEvent.click(screen.getByRole('button', { name: 'Crear' }));
   await waitFor(() => expect(createAdmin).toHaveBeenCalledTimes(1));
-  expect(createAdmin).toHaveBeenCalledWith({ email: 'new-admin@example.invalid', password: 'SyntheticOnly123!', program: 'Enfermería', campus: 'Bogotá' });
+  expect(createAdmin).toHaveBeenCalledWith({ email: 'new-admin@example.invalid', program: 'Enfermería', campus: 'Bogotá' });
 });
-it('trims ordinary fields but preserves the password exactly as entered', async () => {
+it('trims ordinary fields and sends no password from the browser', async () => {
   await mount(); await fill();
-  for (const [label, value] of [['Nombres', '  Synthetic  '], ['Apellidos', '  Administrator  '], ['Cargo', '  Reviewer  '], ['Contraseña *', ' SyntheticOnly123! ']]) {
+  for (const [label, value] of [['Nombres', '  Synthetic  '], ['Apellidos', '  Administrator  '], ['Cargo', '  Reviewer  ']]) {
     fireEvent.change(screen.getByLabelText(label), { target: { value } });
   }
   await userEvent.click(screen.getByRole('button', { name: 'Crear' }));
   await waitFor(() => expect(createAdmin).toHaveBeenCalledTimes(1));
-  expect(createAdmin).toHaveBeenCalledWith({ email: 'new-admin@example.invalid', password: ' SyntheticOnly123! ', program: 'Enfermería', campus: 'Bogotá', first_name: 'Synthetic', last_name: 'Administrator', job_title: 'Reviewer' });
+  expect(createAdmin).toHaveBeenCalledWith({ email: 'new-admin@example.invalid', program: 'Enfermería', campus: 'Bogotá', first_name: 'Synthetic', last_name: 'Administrator', job_title: 'Reviewer' });
 });
 it('freezes every field, cancel and delete while one immutable request is pending', async () => {
   const write = pending<User>(); vi.mocked(createAdmin).mockReturnValue(write.promise);
   await mount(); await fill();
   const user = userEvent.setup(); await user.click(screen.getByRole('button', { name: 'Crear' }));
   await waitFor(() => expect(createAdmin).toHaveBeenCalledTimes(1));
-  for (const label of ['Correo *', 'Contraseña *', 'Nombres', 'Apellidos', 'Cargo', 'Programa *', 'Campus *']) expect(screen.getByLabelText(label)).toBeDisabled();
+  for (const label of ['Correo *', 'Nombres', 'Apellidos', 'Cargo', 'Programa *', 'Campus *']) expect(screen.getByLabelText(label)).toBeDisabled();
   expect(screen.getByRole('button', { name: 'Cancelar' })).toBeDisabled();
   expect(screen.getByRole('button', { name: 'Eliminar' })).toBeDisabled();
   await user.type(screen.getByLabelText('Nombres'), 'Newer draft');
@@ -121,7 +121,7 @@ it('successful write refreshes the list once, then clears the password and close
   expect(listAdmins).toHaveBeenCalledTimes(2);
   expect(screen.queryByLabelText('Contraseña *')).not.toBeInTheDocument();
   await userEvent.click(screen.getByRole('button', { name: 'Crear admin' }));
-  expect(screen.getByLabelText('Contraseña *')).toHaveValue('');
+  expect(screen.queryByLabelText('Contraseña *')).not.toBeInTheDocument();
 });
 it('keeps the draft locked until the post-write read settles', async () => {
   await mount(); await fill();
@@ -141,7 +141,7 @@ it('failed POST retains the draft, unlocks fields and requires an explicit resub
   await userEvent.click(screen.getByRole('button', { name: 'Crear' }));
   await waitFor(() => expect(toast.error).toHaveBeenCalledWith('No se pudo crear'));
   expect(screen.getByLabelText('Correo *')).toHaveValue('new-admin@example.invalid');
-  expect(screen.getByLabelText('Contraseña *')).toBeEnabled();
+  expect(screen.queryByLabelText('Contraseña *')).not.toBeInTheDocument();
   expect(screen.queryByText('PRIVATE_DIAGNOSTIC')).not.toBeInTheDocument();
   expect(createAdmin).toHaveBeenCalledTimes(1);
   await userEvent.click(screen.getByRole('button', { name: 'Crear' }));

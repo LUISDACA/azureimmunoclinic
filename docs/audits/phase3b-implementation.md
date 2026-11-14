@@ -80,7 +80,7 @@ Las siete advertencias backend conocidas son seis avisos SQLAlchemy `noload` y u
 | T-03 datos legacy | **PARTIAL** | Se preparó un comparador offline y fixtures de dosis/evidencias/titulación/estados/fechas/parciales. No se verificó ni conectó ningún dataset institucional; valores ambiguos como `reviewed` no se reinterpretan. |
 | T-04 lote de evidencia a dosis | **DONE** | Asociación opcional y aprobación transaccional implementadas y probadas en `phase3b-closure.md`. |
 
-Las decisiones D-01..D-17 están DECIDIDAS. T-02 y T-03 permanecen PARCIAL/UNKNOWN por depender de datos institucionales reales, fuera de la evidencia disponible. El cierre de los pendientes T-01/T-04 se determina en `docs/audits/phase3b-closure.md`.
+Las decisiones D-01..D-17 están DECIDIDAS. T-02 y T-03 permanecen PARTIAL porque falta validación con datos institucionales autorizados. El arnés sintético y su verificación PostgreSQL del 2026-11-07 se registran en `docs/audits/t02-t03-validation.md`; esa evidencia no sustituye la validación institucional. El cierre de T-01/T-04 se determina en `docs/audits/phase3b-closure.md`.
 
 ## Cierre de T-01 y T-04
 

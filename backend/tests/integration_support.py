@@ -160,6 +160,8 @@ async def smtp_inbox(monkeypatch):
     for name, value in {
         "EMAIL_ENABLED": True,
         "SENDGRID_API_KEY": None,
+        "AZURE_COMMUNICATION_EMAIL_ENDPOINT": None,
+        "AZURE_COMMUNICATION_EMAIL_SENDER": None,
         "SMTP_HOST": "127.0.0.1",
         "SMTP_PORT": server.sockets[0].getsockname()[1],
         "SMTP_USER": "",

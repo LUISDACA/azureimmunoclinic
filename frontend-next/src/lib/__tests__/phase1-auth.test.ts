@@ -19,6 +19,32 @@ beforeEach(async () => {
   localStorage.clear();
 });
 describe("session contract", () => {
+  it("does not show a session-expired alert when startup has no authenticated session", () => {
+    useAuthStore.getState().expire();
+    expect(useAuthStore.getState()).toMatchObject({
+      isAuthenticated: false,
+      errorMessage: null,
+    });
+  });
+  it("clears an authenticated session and announces when it expires", () => {
+    useAuthStore.setState({
+      isAuthenticated: true,
+      isHydrated: true,
+      role: "student",
+      userId: user.id,
+      email: user.email,
+    });
+
+    useAuthStore.getState().expire();
+
+    expect(useAuthStore.getState()).toMatchObject({
+      isAuthenticated: false,
+      isHydrated: true,
+      role: null,
+      userId: null,
+      errorMessage: "Tu sesión expiró. Inicia sesión nuevamente.",
+    });
+  });
   it("loads identity from the API and preserves forced password change", async () => {
     vi.mocked(auth.login).mockResolvedValue({ must_change_password: true });
     vi.mocked(getMe).mockResolvedValue(user);

@@ -3,9 +3,18 @@ import { Pool, type PoolClient } from "pg";
 
 export type TokenPair = { access_token: string; refresh_token: string; session_id: string; expires_in: number; refresh_expires_in: number; must_change_password: boolean; access_until: number };
 let pool: Pool | undefined;
+export function normalizeDatabaseUrl(value: string) {
+  const connectionString = new URL(value.replace(/^postgresql\+asyncpg:/i, "postgresql:"));
+  const legacySsl = connectionString.searchParams.get("ssl");
+  if (legacySsl !== null) {
+    connectionString.searchParams.delete("ssl");
+    if (!connectionString.searchParams.has("sslmode")) connectionString.searchParams.set("sslmode", legacySsl);
+  }
+  return connectionString.toString();
+}
 export function database() {
   if (!process.env.BFF_DATABASE_URL) throw new Error("BFF_DATABASE_URL required");
-  return pool ??= new Pool({ connectionString: process.env.BFF_DATABASE_URL, max: 5, connectionTimeoutMillis: 3000, idleTimeoutMillis: 10000 });
+  return pool ??= new Pool({ connectionString: normalizeDatabaseUrl(process.env.BFF_DATABASE_URL), max: 5, connectionTimeoutMillis: 3000, idleTimeoutMillis: 10000 });
 }
 function key() {
   const value = Buffer.from(process.env.BFF_SESSION_KEY ?? "", "base64");

@@ -61,7 +61,9 @@ class UpdateStudentProfileRequest(AcademicScopeMixin):
 
 class CreateAdminRequest(AcademicScopeMixin):
     email: EmailStr
-    password: str = Field(min_length=8)
+    # Optional for clients that let the server generate the initial credential.
+    # Existing clients may continue sending a password during the transition.
+    password: str | None = Field(None, min_length=8)
     first_name: str | None = Field(None, min_length=1, max_length=100)
     last_name: str | None = Field(None, min_length=1, max_length=100)
     job_title: str | None = Field(None, max_length=150)

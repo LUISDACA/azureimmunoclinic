@@ -30,7 +30,7 @@ interface AuthState {
 }
 let sessionRequest: Promise<void> | undefined;
 let generation = 0;
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   ...anonymous, isHydrated: false, isLoading: false, errorMessage: null,
   async login(email, password) {
     const current = ++generation;
@@ -57,6 +57,9 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
   expire() {
+    // A 401 during anonymous startup (for example, an expired HttpOnly cookie
+    // checked by /users/me) is not a session expiry the login page should show.
+    if (!get().isAuthenticated) return;
     ++generation;
     clearSession();
     clearQueryCache();
