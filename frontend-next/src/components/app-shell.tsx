@@ -57,7 +57,8 @@ interface AppShellProps {
 
 export function AppShell({ title, nav, children }: AppShellProps) {
   const pathname = usePathname();
-  const showCounters = nav.some((item) =>
+  const accountPasswordPage = pathname === "/student/change-password" || pathname === "/admin/change-password";
+  const showCounters = !accountPasswordPage && nav.some((item) =>
     ["Comunicaciones", "Notificaciones"].includes(item.label),
   );
   const { data: notifications, error: notificationError, isFetching: notificationsFetching, refetch: retryNotifications } = useQuery({
@@ -68,7 +69,6 @@ export function AppShell({ title, nav, children }: AppShellProps) {
   });
   const notificationPage = pathname === "/student/notifications" || pathname === "/admin/notifications";
   const studentProfilePage = pathname === "/student/profile";
-  const accountPasswordPage = pathname === "/student/change-password" || pathname === "/admin/change-password";
   const communicationPage = ["/student/communications", "/admin/communications"].some(
     base => pathname === base || pathname.startsWith(`${base}/`),
   );
@@ -117,41 +117,45 @@ export function AppShell({ title, nav, children }: AppShellProps) {
             </div>
           </div>
         </header>
-        <div className={cn("mx-auto flex w-full max-w-7xl flex-1 gap-6 px-4 py-6", studentProfilePage && profileStyles.layout)}>
-          <aside className="hidden w-60 shrink-0 md:block">
-            <nav className="flex flex-col gap-1">
-              {nav.map((item) => {
-                const active = isActiveHref(item.href, pathname, nav);
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    aria-current={active ? "page" : undefined}
-                    className={cn(
-                      "rounded-xl px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                      active
-                        ? "bg-[color:var(--action)] text-[color:var(--action-foreground)] shadow-sm"
-                        : "text-muted-foreground hover:bg-[color:var(--primary)]/10 hover:text-[color:var(--interactive-foreground)]",
-                    )}
-                  >
-                    <span className="flex items-center justify-between gap-2">
-                      <span>{item.label}</span>
-                      <NavCounter
-                        label={item.label}
-                        communications={unreadCommunications}
-                        notifications={unreadNotifications}
-                      />
-                    </span>
-                  </Link>
-                );
-              })}
-            </nav>
-          </aside>
-          <div className="min-w-0 flex-1">
-            <nav aria-label="Navegación de módulos" className={cn("mb-4 flex flex-wrap gap-2 md:hidden", studentProfilePage && profileStyles.navigation)}>
-              {nav.map(item => <Link key={item.href} href={item.href} aria-current={isActiveHref(item.href, pathname, nav) ? "page" : undefined} className="rounded-xl border px-3 py-2 text-sm">{item.label}</Link>)}
-            </nav>
-            {notificationError && !notificationPage && <QueryError error={notificationError} retry={() => retryNotifications({ cancelRefetch: false })} retrying={notificationsFetching} />}
+        <div className={cn("mx-auto flex w-full max-w-7xl flex-1 gap-6 px-4 py-6", accountPasswordPage && "justify-center", studentProfilePage && profileStyles.layout)}>
+          {!accountPasswordPage && (
+            <aside className="hidden w-60 shrink-0 md:block">
+              <nav aria-label="Navegación principal" className="flex flex-col gap-1">
+                {nav.map((item) => {
+                  const active = isActiveHref(item.href, pathname, nav);
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      aria-current={active ? "page" : undefined}
+                      className={cn(
+                        "rounded-xl px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                        active
+                          ? "bg-[color:var(--action)] text-[color:var(--action-foreground)] shadow-sm"
+                          : "text-muted-foreground hover:bg-[color:var(--primary)]/10 hover:text-[color:var(--interactive-foreground)]",
+                      )}
+                    >
+                      <span className="flex items-center justify-between gap-2">
+                        <span>{item.label}</span>
+                        <NavCounter
+                          label={item.label}
+                          communications={unreadCommunications}
+                          notifications={unreadNotifications}
+                        />
+                      </span>
+                    </Link>
+                  );
+                })}
+              </nav>
+            </aside>
+          )}
+          <div className={cn("min-w-0 flex-1", accountPasswordPage && "mx-auto w-full max-w-md")}>
+            {!accountPasswordPage && (
+              <nav aria-label="Navegación de módulos" className={cn("mb-4 flex flex-wrap gap-2 md:hidden", studentProfilePage && profileStyles.navigation)}>
+                {nav.map(item => <Link key={item.href} href={item.href} aria-current={isActiveHref(item.href, pathname, nav) ? "page" : undefined} className="rounded-xl border px-3 py-2 text-sm">{item.label}</Link>)}
+              </nav>
+            )}
+            {notificationError && !notificationPage && !accountPasswordPage && <QueryError error={notificationError} retry={() => retryNotifications({ cancelRefetch: false })} retrying={notificationsFetching} />}
             <main ref={mainRef} className={notificationPage ? notificationStyles.content : undefined}>{children}</main>
           </div>
         </div>

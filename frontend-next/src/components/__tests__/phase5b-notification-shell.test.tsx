@@ -81,3 +81,19 @@ it('app_admin navigation shows unread communication count on its dashboard shell
   expect(screen.getAllByRole('link', { name: /Comunicaciones/ })).toHaveLength(2);
   expect(screen.getByText('Synthetic app admin dashboard')).toBeVisible();
 });
+
+it.each([
+  ['student', '/student/change-password'],
+  ['admin', '/admin/change-password'],
+] as const)('%s forced password change skips module queries and navigation', async (role, path) => {
+  navigation.pathname = path;
+  vi.mocked(listNotifications).mockRejectedValue(failure(403));
+  mount(role, <p>Forced password form</p>);
+
+  expect(await screen.findByText('Forced password form')).toBeVisible();
+  expect(listNotifications).not.toHaveBeenCalled();
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: 'Inicio' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('navigation', { name: 'Navegación de módulos' })).not.toBeInTheDocument();
+});
