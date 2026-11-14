@@ -1,0 +1,44 @@
+name: Flutter Azure validation APK
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/flutter-azure-apk.yml"
+      - "frontend/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-android-apk:
+    name: Build Azure debug APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.41.6"
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: flutter pub get
+
+      - name: Build debug APK for Azure validation
+        working-directory: frontend
+        run: >-
+          flutter build apk --debug
+          --dart-define=API_BASE_URL=https://ic-validation-6uj5qzgnzi.azurewebsites.net/api/v1
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: immunoclinic-azure-debug-apk
+          path: frontend/build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
