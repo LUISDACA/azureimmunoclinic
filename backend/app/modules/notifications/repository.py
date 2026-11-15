@@ -96,12 +96,14 @@ class NotificationRepository:
                         # Keep them usable only while this user has a valid session.
                         DeviceToken.session_id.is_(None),
                         exists(
-                            select(AuthSession.id).where(
+                            select(AuthSession.id)
+                            .where(
                                 AuthSession.user_id == user_id,
                                 AuthSession.status == "ACTIVE",
                                 AuthSession.expires_at > datetime.now(timezone.utc),
                                 AuthSession.auth_version == User.auth_version,
                             )
+                            .correlate(User)
                         ),
                     ),
                 ),
