@@ -261,7 +261,7 @@ function DoseRow({ dose }: { dose: StudentDose }) {
 
   return (
     <div className="p-4">
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 flex-1">
           <p className="font-semibold">{label}</p>
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
@@ -298,7 +298,7 @@ function DoseRow({ dose }: { dose: StudentDose }) {
         </div>
 
         {editable && !editing && (
-          <div className="flex shrink-0 items-center gap-1">
+          <div className="flex flex-wrap items-center gap-1 sm:shrink-0">
             <Button
               variant="ghost"
               size="sm"

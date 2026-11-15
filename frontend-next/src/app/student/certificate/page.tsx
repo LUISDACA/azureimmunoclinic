@@ -63,8 +63,8 @@ export default function CertificatePage() {
 
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
+          <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
               <CardTitle className="text-base">Esquema de vacunación</CardTitle>
               <CardDescription>
                 {isLoading ? "Cargando…" : `${approved} de ${total} vacunas aprobadas`}

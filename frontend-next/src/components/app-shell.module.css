@@ -1,0 +1,36 @@
+.mobileNavigation {
+  scrollbar-width: none;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mobileNavigation::-webkit-scrollbar {
+  display: none;
+}
+
+.mobileNavigation :global(a) {
+  scroll-snap-align: start;
+  white-space: nowrap;
+}
+
+.main,
+.main > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.main :global(h1),
+.main :global(h2),
+.main :global(h3),
+.main :global(p),
+.main :global(label),
+.main :global(a),
+.main :global(button),
+.main :global(td),
+.main :global(th) {
+  overflow-wrap: anywhere;
+}
+
+.main :global(form > fieldset > *) {
+  min-width: 0;
+}

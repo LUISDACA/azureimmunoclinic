@@ -119,15 +119,15 @@ export default function AdminManagementPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-start justify-between gap-3">
-        <div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold tracking-tight">Administradores</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Cuentas con permisos de administración por programa y sede.
           </p>
         </div>
         {readable && (
-          <div className="flex flex-wrap justify-end gap-2">
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:justify-end">
             <Button variant="outline" disabled={busy} onClick={retry}>Actualizar lista</Button>
             <Button disabled={busy} onClick={() => { setWriteError(null); setShowForm((s) => !s); }}>
               {showForm ? "Cancelar" : "Crear admin"}

@@ -272,7 +272,7 @@ function SemesterGroup({
       className="group overflow-hidden rounded-xl border border-[color:var(--divider)] bg-card shadow-sm"
       open={defaultOpen}
     >
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-[color:var(--primary)]/5">
+      <summary className="flex cursor-pointer list-none flex-col gap-2 px-4 py-3 transition-colors hover:bg-[color:var(--primary)]/5 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-center gap-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[color:var(--primary)]/12 text-[color:var(--primary)]">
             <Users className="h-5 w-5" />
@@ -284,7 +284,7 @@ function SemesterGroup({
             </p>
           </div>
         </div>
-        <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
+        <div className="flex min-w-0 flex-wrap items-center justify-start gap-2 sm:justify-end">
           <Badge variant="success">{approved} aprobados</Badge>
           <Badge variant={pending > 0 ? "warning" : "muted"}>
             {pending} pendientes
