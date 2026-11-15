@@ -5,6 +5,7 @@ export interface AuthTokens {
 }
 
 export type Role = "student" | "admin" | "app_admin";
+export type EmailDeliveryStatus = "accepted" | "disabled" | "failed";
 export type Gender = "male" | "female";
 export type AppliesTo = "all" | "male" | "female";
 export type DoseType = "standard" | "booster" | "titer";
@@ -49,6 +50,11 @@ export interface User {
   must_change_password: boolean;
   created_at: string;
   profile: Profile | null;
+}
+
+export interface AccountCreatedUser extends User {
+  /** Optional while old API instances are still present during a rolling deploy. */
+  email_delivery_status?: EmailDeliveryStatus;
 }
 
 export interface DoseConfig {
@@ -234,6 +240,7 @@ export interface ImportStudentRowResult {
   email: string | null;
   status: "created" | "skipped" | "error" | string;
   message: string;
+  email_delivery_status?: EmailDeliveryStatus | null;
 }
 
 export interface ImportStudentsResponse {

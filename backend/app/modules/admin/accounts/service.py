@@ -13,6 +13,7 @@ from app.core.exceptions import (
     NotFoundException,
 )
 from app.core.security import hash_password
+from app.modules.admin.account_creation import AccountCreationResult
 from app.modules.admin.schemas import CreateAdminRequest
 from app.modules.audit.service import AuditService
 from app.modules.users.models import Profile, User
@@ -38,7 +39,9 @@ class AdminAccountService:
         self.user_repo = user_repo
         self.audit = audit
 
-    async def create_admin(self, app_admin: User, data: CreateAdminRequest) -> User:
+    async def create_admin(
+        self, app_admin: User, data: CreateAdminRequest
+    ) -> AccountCreationResult:
         self._ensure_app_admin(app_admin, "crear administradores")
 
         existing = await self.user_repo.get_by_email(data.email)
@@ -81,12 +84,16 @@ class AdminAccountService:
         )
 
         await self.db.commit()
-        await send_admin_account_created_email(
+        email_delivery_status = await send_admin_account_created_email(
             admin.email,
             full_name=f"{first_name} {last_name}".strip(),
             temporary_password=temporary_password,
         )
-        return await self.user_repo.get_by_id(admin.id)
+        created_admin = await self.user_repo.get_by_id(admin.id)
+        return AccountCreationResult(
+            user=created_admin,
+            email_delivery_status=email_delivery_status,
+        )
 
     async def list_admins(self, app_admin: User) -> list[User]:
         self._ensure_app_admin(app_admin, "ver administradores")

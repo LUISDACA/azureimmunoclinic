@@ -38,7 +38,7 @@ async function write(kind:'create'|'remove') {
 beforeEach(() => {
   vi.resetAllMocks(); vi.spyOn(window, 'confirm').mockReturnValue(true);
   useAuthStore.setState({ userId:'synthetic-app-admin',role:'app_admin',isAuthenticated:true });
-  vi.mocked(listAdmins).mockResolvedValue([admin]); vi.mocked(createAdmin).mockResolvedValue(admin); vi.mocked(deleteAdmin).mockResolvedValue(undefined);
+  vi.mocked(listAdmins).mockResolvedValue([admin]); vi.mocked(createAdmin).mockResolvedValue({ ...admin, email_delivery_status: 'accepted' }); vi.mocked(deleteAdmin).mockResolvedValue(undefined);
   vi.mocked(getAcademicOptions).mockResolvedValue({ programs: ['Medicina', 'Enfermería'], campuses: ['Bogotá', 'Cali'], semesters: Array.from({ length: 10 }, (_, i) => i + 1) });
 });
 afterEach(() => { cleanup(); clients.splice(0).forEach(c => c.clear()); vi.restoreAllMocks(); });
@@ -88,7 +88,7 @@ for (const kind of ['create','remove'] as const) {
   for (const status of [401,403,404,429,500,503]) {
     it(`${kind} confirmed plus GET ${status} shows confirmed outcome and retries GET only`, async () => {
       mount(); await screen.findByText(admin.email);vi.mocked(listAdmins).mockRejectedValue(failure(status));await write(kind);
-      await screen.findByText(confirmed[kind]); expect(toast.warning).toHaveBeenCalledWith(confirmed[kind]);expect(toast.success).not.toHaveBeenCalled();
+      await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(confirmed[kind])); expect(toast.warning).toHaveBeenCalledWith(expect.stringContaining(confirmed[kind]));expect(toast.success).not.toHaveBeenCalled();
       expect(screen.queryByRole('form')).not.toBeInTheDocument();expect(screen.queryByText(admin.email)).not.toBeInTheDocument();
       const mutation = kind==='create'?createAdmin:deleteAdmin;expect(mutation).toHaveBeenCalledTimes(1);
       const read=pending<User[]>();vi.mocked(listAdmins).mockReturnValue(read.promise);const before=vi.mocked(listAdmins).mock.calls.length;
@@ -105,7 +105,7 @@ for (const kind of ['create','remove'] as const) {
     if(kind==='create')expect(screen.getByLabelText('Correo *')).toHaveValue('new-admin@example.com');
   });
   it(`${kind} success notice is not reused after recovery then an unrelated GET failure`, async()=>{
-    const client=mount();await screen.findByText(admin.email);vi.mocked(listAdmins).mockRejectedValue(failure(503));await write(kind);await screen.findByText(confirmed[kind]);
+    const client=mount();await screen.findByText(admin.email);vi.mocked(listAdmins).mockRejectedValue(failure(503));await write(kind);await waitFor(()=>expect(screen.getByRole('status')).toHaveTextContent(confirmed[kind]));
     vi.mocked(listAdmins).mockResolvedValue([admin]);fireEvent.click(screen.getByRole('button',{name:'Reintentar'}));await screen.findByText(admin.email);
     vi.mocked(listAdmins).mockRejectedValue(failure(403));await act(async()=>{await client.refetchQueries({queryKey:['admins']});});await screen.findByRole('alert');expect(screen.queryByText(confirmed[kind])).not.toBeInTheDocument();
   });

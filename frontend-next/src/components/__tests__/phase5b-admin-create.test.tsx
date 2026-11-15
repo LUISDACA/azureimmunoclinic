@@ -11,7 +11,7 @@ import type { User } from '@/lib/api/types';
 const navigation = vi.hoisted(() => ({ push: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => navigation }));
 vi.mock('@/lib/api/admin', () => ({ createAdmin: vi.fn(), deleteAdmin: vi.fn(), getAcademicOptions: vi.fn(), listAdmins: vi.fn() }));
-vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+vi.mock('sonner', () => ({ toast: { success: vi.fn(), warning: vi.fn(), error: vi.fn() } }));
 const clients: QueryClient[] = [];
 const existing = { id: 'synthetic-admin', email: 'admin@example.invalid', role: 'admin', is_active: true, profile: null } as User;
 function pending<T>() {
@@ -38,7 +38,7 @@ beforeEach(() => {
   useAuthStore.setState({ userId: 'synthetic-app-admin', role: 'app_admin', isAuthenticated: true });
   vi.mocked(listAdmins).mockResolvedValue([existing]);
   vi.mocked(getAcademicOptions).mockResolvedValue({ programs: ['Medicina', 'Enfermería'], campuses: ['Bogotá', 'Cali'], semesters: Array.from({ length: 10 }, (_, i) => i + 1) });
-  vi.mocked(createAdmin).mockResolvedValue({ ...existing, id: 'created', email: 'new-admin@example.invalid' });
+  vi.mocked(createAdmin).mockResolvedValue({ ...existing, id: 'created', email: 'new-admin@example.invalid', email_delivery_status: 'accepted' });
 });
 afterEach(() => { cleanup(); clients.splice(0).forEach(c => c.clear()); });
 
@@ -57,7 +57,7 @@ it('uses a named native form without asking for an initial password', async () =
   await mount();
   expect(screen.getByRole('form', { name: 'Nuevo administrador' })).toContainElement(screen.getByRole('button', { name: 'Crear' }));
   expect(screen.queryByLabelText('Contraseña *')).not.toBeInTheDocument();
-  expect(screen.getByText('Se generará una contraseña temporal y se enviará a este correo. El administrador deberá cambiarla al iniciar sesión.')).toBeInTheDocument();
+  expect(screen.getByText('Se generará una contraseña temporal y se intentará enviar a este correo. El administrador deberá cambiarla al iniciar sesión.')).toBeInTheDocument();
   for (const label of ['Nombres', 'Apellidos']) {
     expect(screen.getByLabelText(label)).not.toBeRequired();
     expect(screen.getByLabelText(label)).toHaveAttribute('maxlength', '100');
@@ -117,11 +117,17 @@ it('same-frame duplicate submit is coalesced by the existing mutation guard', as
 it('successful write refreshes the list once, then clears the password and closes the form', async () => {
   await mount(); await fill();
   await userEvent.click(screen.getByRole('button', { name: 'Crear' }));
-  await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Administrador creado'));
+  await waitFor(() => expect(toast.success).toHaveBeenCalledWith(expect.stringContaining('Administrador creado')));
   expect(listAdmins).toHaveBeenCalledTimes(2);
   expect(screen.queryByLabelText('Contraseña *')).not.toBeInTheDocument();
   await userEvent.click(screen.getByRole('button', { name: 'Crear admin' }));
   expect(screen.queryByLabelText('Contraseña *')).not.toBeInTheDocument();
+});
+it('reports that account creation succeeded when email delivery was not accepted', async () => {
+  vi.mocked(createAdmin).mockResolvedValue({ ...existing, id: 'created', email: 'new-admin@example.invalid', email_delivery_status: 'failed' });
+  await mount(); await fill(); await userEvent.click(screen.getByRole('button', { name: 'Crear' }));
+  await waitFor(() => expect(toast.warning).toHaveBeenCalledWith(expect.stringMatching(/no se confirmó el envío del correo/i)));
+  expect(createAdmin).toHaveBeenCalledTimes(1);
 });
 it('keeps the draft locked until the post-write read settles', async () => {
   await mount(); await fill();

@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 import pytest_asyncio
 from app.common.enums import DoseStatus, DoseType, Gender, Role
+from app.core.email import EmailDeliveryStatus
 from app.core.exceptions import BadRequestException, ConflictException, NotFoundException
 from app.modules.admin.schemas import (
     CreateStudentRequest,
@@ -59,6 +60,7 @@ class TestStudentCreation:
 
         async def fake_account_email(email: str, **context):
             sent_emails.append((email, context))
+            return EmailDeliveryStatus.ACCEPTED
 
         monkeypatch.setattr(
             "app.modules.admin.students.service.send_account_created_email",
@@ -73,8 +75,10 @@ class TestStudentCreation:
             document_number="99887766",
             sex=Gender.MALE,
         )
-        student = await student_admin_service.create_student(admin_user, data)
+        account = await student_admin_service.create_student(admin_user, data)
+        student = account.user
         assert student is not None
+        assert account.email_delivery_status == EmailDeliveryStatus.ACCEPTED
         assert student.email == "new_student@test.com"
         assert student.role == Role.STUDENT
         assert student.is_active is True
@@ -88,6 +92,34 @@ class TestStudentCreation:
         assert context["temporary_password"] != data.document_number
         assert verify_password(context["temporary_password"], student.hashed_password)
         assert not verify_password(data.document_number, student.hashed_password)
+
+    @pytest.mark.asyncio
+    async def test_create_student_reports_email_provider_failure(
+        self,
+        student_admin_service: StudentAdminService,
+        admin_user: User,
+        monkeypatch: pytest.MonkeyPatch,
+    ):
+        async def failed_email(*_args, **_kwargs):
+            return EmailDeliveryStatus.FAILED
+
+        monkeypatch.setattr(
+            "app.modules.admin.students.service.send_account_created_email",
+            failed_email,
+        )
+        result = await student_admin_service.create_student(
+            admin_user,
+            CreateStudentRequest(
+                email="mail-failure-student@test.com",
+                first_name="Synthetic",
+                last_name="Student",
+                document_number="MAIL-FAILURE-ONLY",
+                sex=Gender.MALE,
+            ),
+        )
+
+        assert result.user.is_active is True
+        assert result.email_delivery_status == EmailDeliveryStatus.FAILED
 
     @pytest.mark.asyncio
     async def test_create_duplicate_email_fails(

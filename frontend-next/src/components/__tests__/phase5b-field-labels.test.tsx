@@ -18,6 +18,16 @@ vi.mock('@/lib/api/admin', () => ({
   listStudentCertificates: vi.fn(async () => []),
   createStudent: vi.fn(), createAdmin: vi.fn(), updateStudentProfile: vi.fn(), deactivateStudent: vi.fn(), reactivateStudent: vi.fn(), deleteStudent: vi.fn(),
 }));
+vi.mock('@/lib/api/users', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/api/users')>();
+  return {
+    ...actual,
+    getMe: vi.fn(async () => ({
+      id: 'synthetic-admin', email: 'admin@example.invalid', role: 'admin', is_active: true,
+      profile: { id: 'synthetic-profile', first_name: 'Synthetic', last_name: 'Admin', sex: 'female', program: 'Medicina', campus: 'Pasto' },
+    })),
+  };
+});
 beforeEach(() => { vi.clearAllMocks(); sessionStorage.clear(); useAuthStore.setState({ role: 'admin', userId: 'synthetic-admin', isAuthenticated: true }); });
 afterEach(cleanup);
 function mount(children: React.ReactNode) { return render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>{children}</QueryClientProvider>); }
@@ -42,7 +52,7 @@ it('list filter labels focus their native controls without changing URL/filter v
 
 it('create labels include required, date, sex and import fields with unique IDs', async () => {
   mount(<CreateStudent />);
-  await checkLabels(['Correo *', 'Documento *', 'Nombres *', 'Apellidos *', 'Sexo *', 'Fecha de nacimiento', 'Programa', 'Campus', 'Archivo Excel o CSV']);
+  await checkLabels(['Correo *', 'Documento *', 'Nombres *', 'Apellidos *', 'Sexo *', 'Fecha de nacimiento', 'Programa asignado', 'Campus asignado', 'Archivo Excel o CSV']);
   expect(screen.getByLabelText('Sexo *')).toHaveValue('female');
   expect(screen.getByLabelText('Fecha de nacimiento')).toHaveAttribute('type', 'date');
 });

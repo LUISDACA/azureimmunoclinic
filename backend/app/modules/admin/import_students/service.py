@@ -113,7 +113,8 @@ class AdminStudentImportService:
                     )
                     continue
 
-                student = await self.admin_deps.student_service.create_student(admin, data)
+                account = await self.admin_deps.student_service.create_student(admin, data)
+                student = account.user
                 dose_updates, dose_warnings = await self._apply_imported_scheme_data(
                     admin=admin,
                     student=student,
@@ -131,6 +132,7 @@ class AdminStudentImportService:
                         email=student.email if student else data.email,
                         status="created",
                         message=message,
+                        email_delivery_status=account.email_delivery_status,
                     )
                 )
             except (ValueError, ValidationError, BadRequestException, ConflictException) as exc:

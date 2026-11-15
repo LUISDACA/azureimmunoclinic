@@ -45,6 +45,29 @@ def test_backend_status_enums_are_present_in_openapi_and_client_types():
     assert "final VaccineStatus status;" in DART_VACCINE
 
 
+def test_account_creation_responses_publish_provider_email_status():
+    schema = app.openapi()
+    paths = schema["paths"]
+    for path in ("/api/v1/admin/students", "/api/v1/admin/admins"):
+        response_schema = paths[path]["post"]["responses"]["200"]["content"]["application/json"][
+            "schema"
+        ]
+        assert response_schema["$ref"].endswith("/AccountCreatedResponse")
+
+    response_fields = schema["components"]["schemas"]["AccountCreatedResponse"]["properties"]
+    email_status = response_fields["email_delivery_status"]
+    if "$ref" in email_status:
+        enum_name = email_status["$ref"].rsplit("/", maxsplit=1)[-1]
+        email_status = schema["components"]["schemas"][enum_name]
+    assert set(email_status["enum"]) == {
+        "accepted",
+        "disabled",
+        "failed",
+    }
+    assert "password" not in response_fields
+    assert 'export type EmailDeliveryStatus = "accepted" | "disabled" | "failed";' in NEXT_TYPES
+
+
 def test_openapi_exposes_date_and_datetime_with_nullable_contracts():
     schema = app.openapi()["components"]["schemas"]
     dose = schema["StudentDoseResponse"]["properties"]

@@ -5,6 +5,7 @@ from datetime import date
 
 from app.common.academic import ACADEMIC_PROGRAMS, CAMPUSES
 from app.common.enums import AppliesTo, DoseType, Gender
+from app.core.email import EmailDeliveryStatus
 from app.modules.users.schemas import UserResponse
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
@@ -101,6 +102,13 @@ class ImportStudentRowResult(BaseModel):
     email: str | None = None
     status: str
     message: str
+    email_delivery_status: EmailDeliveryStatus | None = None
+
+
+class AccountCreatedResponse(UserResponse):
+    """Account details plus whether the email provider accepted onboarding."""
+
+    email_delivery_status: EmailDeliveryStatus
 
 
 class ImportStudentsResponse(BaseModel):

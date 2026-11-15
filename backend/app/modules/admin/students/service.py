@@ -15,6 +15,7 @@ from app.core.exceptions import (
     NotFoundException,
 )
 from app.core.security import hash_password
+from app.modules.admin.account_creation import AccountCreationResult
 from app.modules.admin.schemas import CreateStudentRequest, UpdateStudentProfileRequest
 from app.modules.audit.service import AuditService, build_change_details
 from app.modules.evidence.models import EvidenceBatch
@@ -51,7 +52,7 @@ class StudentAdminService:
         self,
         admin: User,
         data: CreateStudentRequest,
-    ) -> User:
+    ) -> AccountCreationResult:
         data = self._apply_admin_scope_to_student_data(admin, data)
         existing = await self.user_repo.get_by_email(data.email)
         if existing:
@@ -112,12 +113,16 @@ class StudentAdminService:
         )
 
         await self.db.commit()
-        await send_account_created_email(
+        email_delivery_status = await send_account_created_email(
             user.email,
             full_name=f"{data.first_name} {data.last_name}".strip(),
             temporary_password=temporary_password,
         )
-        return await self.user_repo.get_by_id(user.id)
+        created_user = await self.user_repo.get_by_id(user.id)
+        return AccountCreationResult(
+            user=created_user,
+            email_delivery_status=email_delivery_status,
+        )
 
     async def deactivate_student(self, admin: User, student_id: uuid.UUID) -> User:
         student = await self.get_student_detail(admin, student_id)

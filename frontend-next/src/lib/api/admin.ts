@@ -3,6 +3,7 @@ import { fetchAndDownload, type DownloadOptions } from "@/lib/api/download";
 import { API_BASE_URL } from "@/lib/config";
 import {
   AdminStatistics,
+  AccountCreatedUser,
   AcademicOptions,
   AdminStudentListResponse,
   AdminStudentListItem,
@@ -132,8 +133,8 @@ export async function getStudent(id: string): Promise<User> {
   return data;
 }
 
-export async function createStudent(payload: CreateStudentRequest): Promise<User> {
-  const { data } = await apiClient.post<User>("/admin/students", payload);
+export async function createStudent(payload: CreateStudentRequest): Promise<AccountCreatedUser> {
+  const { data } = await apiClient.post<AccountCreatedUser>("/admin/students", payload);
   return data;
 }
 
@@ -196,8 +197,8 @@ export async function listAdmins(): Promise<User[]> {
   return data;
 }
 
-export async function createAdmin(payload: CreateAdminRequest): Promise<User> {
-  const { data } = await apiClient.post<User>("/admin/admins", payload);
+export async function createAdmin(payload: CreateAdminRequest): Promise<AccountCreatedUser> {
+  const { data } = await apiClient.post<AccountCreatedUser>("/admin/admins", payload);
   return data;
 }
 

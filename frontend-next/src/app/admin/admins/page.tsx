@@ -64,14 +64,15 @@ export default function AdminManagementPage() {
     setConfirmedWrite(null);
     setWriteError(null);
   }
-  function notifyWrite(success: string, confirmedButUnread: string) {
+  function notifyWrite(success: string, confirmedButUnread: string, severity: "success" | "warning" = "success") {
     const read = queryClient.getQueryState(["admins"]);
     if (read?.status === "error") {
       setConfirmedWrite({ message: confirmedButUnread, readVersion: read.dataUpdateCount });
       toast.warning(confirmedButUnread);
     } else {
       setConfirmedWrite(null);
-      toast.success(success);
+      if (severity === "warning") toast.warning(success);
+      else toast.success(success);
     }
   }
 
@@ -79,8 +80,16 @@ export default function AdminManagementPage() {
     affectedQueries: [["admins"],["audit"]],
     mutationFn: (payload: CreateAdminRequest) => createAdmin(payload),
     onMutate: beginWrite,
-    onSuccess: () => {
-      notifyWrite("Administrador creado", "El administrador se creó, pero no se pudo actualizar la lista.");
+    onSuccess: (account) => {
+      const accepted = account.email_delivery_status === "accepted";
+      const delivery = accepted
+        ? "El proveedor aceptó el correo; la llegada a la bandeja no está confirmada."
+        : "No se confirmó el envío del correo. No vuelvas a crear la cuenta; solicita ayuda para habilitar el acceso.";
+      notifyWrite(
+        `Administrador creado. ${delivery}`,
+        `El administrador se creó, pero no se pudo actualizar la lista. ${delivery}`,
+        accepted ? "success" : "warning",
+      );
       setForm(EMPTY);
       setShowForm(false);
     },
@@ -195,7 +204,7 @@ export default function AdminManagementPage() {
                   onChange={(v) => setForm({ ...form, campus: v })}
                 />
                 <p className="text-sm text-muted-foreground sm:col-span-2">
-                  Se generará una contraseña temporal y se enviará a este correo. El administrador deberá cambiarla al iniciar sesión.
+                  Se generará una contraseña temporal y se intentará enviar a este correo. El administrador deberá cambiarla al iniciar sesión.
                 </p>
                 <div className="sm:col-span-2">
                   <Button type="submit" disabled={busy}>

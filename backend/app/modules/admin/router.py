@@ -12,6 +12,7 @@ from app.db.session import get_db
 from app.modules.admin.import_students.service import AdminStudentImportService
 from app.modules.admin.presenters import student_list_item
 from app.modules.admin.schemas import (
+    AccountCreatedResponse,
     AdminStatisticsResponse,
     AdminStudentListResponse,
     CreateAdminRequest,
@@ -120,15 +121,18 @@ async def get_academic_options(
 # ── Student CRUD ──────────────────────────────────────────────────────
 
 
-@router.post("/students", response_model=UserResponse)
+@router.post("/students", response_model=AccountCreatedResponse)
 async def create_student(
     data: CreateStudentRequest,
     admin: User = Depends(require_role("admin", "app_admin")),
     deps: AdminDependencies = Depends(_get_deps),
 ):
     """Create a new student with profile, vaccine assignment, and dose generation."""
-    student = await deps.student_service.create_student(admin, data)
-    return UserResponse.model_validate(student)
+    result = await deps.student_service.create_student(admin, data)
+    return AccountCreatedResponse(
+        **UserResponse.model_validate(result.user).model_dump(),
+        email_delivery_status=result.email_delivery_status,
+    )
 
 
 @router.get("/students", response_model=AdminStudentListResponse)
@@ -472,15 +476,18 @@ async def list_admins(
     return [UserResponse.model_validate(admin) for admin in admins]
 
 
-@router.post("/admins", response_model=UserResponse)
+@router.post("/admins", response_model=AccountCreatedResponse)
 async def create_admin(
     data: CreateAdminRequest,
     app_admin: User = Depends(require_role("app_admin")),
     deps: AdminDependencies = Depends(_get_deps),
 ):
     """Create a normal administrator scoped to one program and campus."""
-    admin = await deps.account_service.create_admin(app_admin, data)
-    return UserResponse.model_validate(admin)
+    result = await deps.account_service.create_admin(app_admin, data)
+    return AccountCreatedResponse(
+        **UserResponse.model_validate(result.user).model_dump(),
+        email_delivery_status=result.email_delivery_status,
+    )
 
 
 @router.delete("/admins/{admin_id}", status_code=204)

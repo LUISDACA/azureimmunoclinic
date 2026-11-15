@@ -89,7 +89,7 @@ class TestAdminAccountService:
         )
         password = "SyntheticAdmin123!"
 
-        admin = await service.create_admin(
+        result = await service.create_admin(
             app_admin,
             CreateAdminRequest(
                 email="normal.admin@test.com",
@@ -101,6 +101,8 @@ class TestAdminAccountService:
                 campus="Cali",
             ),
         )
+        admin = result.user
+        assert result.email_delivery_status == EmailDeliveryStatus.ACCEPTED
 
         assert admin.profile.first_name == "Ana"
         assert admin.profile.last_name == "Perez"
@@ -144,7 +146,7 @@ class TestAdminAccountService:
             fake_admin_email,
         )
 
-        admin = await service.create_admin(
+        result = await service.create_admin(
             app_admin,
             CreateAdminRequest(
                 email="generated.admin@test.com",
@@ -152,6 +154,8 @@ class TestAdminAccountService:
                 campus="Cali",
             ),
         )
+        admin = result.user
+        assert result.email_delivery_status == EmailDeliveryStatus.ACCEPTED
 
         generated_password = "SyntheticGeneratedCredentialAa1!"
         from app.core.security import verify_password
@@ -189,7 +193,7 @@ class TestAdminAccountService:
             "app.modules.admin.accounts.service.send_admin_account_created_email",
             disabled_email,
         )
-        admin = await service.create_admin(
+        result = await service.create_admin(
             app_admin,
             CreateAdminRequest(
                 email="normal.admin@test.com",
@@ -198,6 +202,8 @@ class TestAdminAccountService:
                 campus="Cali",
             ),
         )
+        admin = result.user
 
         assert admin.email == "normal.admin@test.com"
+        assert result.email_delivery_status == EmailDeliveryStatus.DISABLED
         assert service.db.commits == 1

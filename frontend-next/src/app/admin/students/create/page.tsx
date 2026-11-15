@@ -14,6 +14,8 @@ import {
   previewStudentImport,
 } from "@/lib/api/admin";
 import { ImportPreviewResponse, ImportStudentsResponse } from "@/lib/api/types";
+import { getMe } from "@/lib/api/users";
+import { useAuthStore } from "@/lib/auth/store";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,6 +39,8 @@ const INITIAL: CreateStudentRequest = {
 
 export default function CreateStudentPage() {
   const router = useRouter();
+  const role = useAuthStore((state) => state.role);
+  const isScopedAdmin = role === "admin";
   const sexId = useId();
   const formId = useId();
   const mounted = useRef(true);
@@ -45,6 +49,13 @@ export default function CreateStudentPage() {
   const [error, setError] = useState<string | null>(null);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const [form, setForm] = useState<CreateStudentRequest>(INITIAL);
+  const currentUser = useQuery({
+    queryKey: ["user", "me"],
+    queryFn: getMe,
+    enabled: isScopedAdmin,
+  });
+  const adminScope = currentUser.data?.profile;
+  const hasAdminScope = Boolean(adminScope?.program && adminScope.campus);
   const academicOptions = useQuery({
     queryKey: ["academic-options"],
     queryFn: getAcademicOptions,
@@ -60,7 +71,11 @@ export default function CreateStudentPage() {
     mutationFn: (payload: CreateStudentRequest) => createStudent(payload),
     onSuccess: (user) => {
       if (!mounted.current) return;
-      toast.success("Estudiante creado");
+      if (user.email_delivery_status === "accepted") {
+        toast.success("Estudiante creado. El proveedor aceptó el correo de acceso; esto no confirma su llegada a la bandeja.");
+      } else {
+        toast.warning("Estudiante creado, pero no se confirmó el envío del correo. No vuelvas a crear la cuenta; solicita ayuda para habilitar el acceso.");
+      }
       router.replace(`/admin/students/${user.id}`);
     },
     onError: () => showError("No se pudo crear el estudiante. Revisa los datos antes de reintentar."),
@@ -83,7 +98,14 @@ export default function CreateStudentPage() {
     onSuccess: (data) => {
       if (!mounted.current) return;
       setImportResult(data);
-      toast.success(`Importacion completa: ${data.created} creado(s)`);
+      const emailIssues = data.results.filter(
+        (row) => row.status === "created" && row.email_delivery_status !== "accepted",
+      ).length;
+      if (emailIssues) {
+        toast.warning(`Importación completa: ${data.created} cuenta(s) creada(s), ${emailIssues} correo(s) sin confirmar.`);
+      } else {
+        toast.success(`Importación completa: ${data.created} cuenta(s) creada(s). El proveedor aceptó los correos; la llegada no está confirmada.`);
+      }
     },
     onError: () => showError("No se pudo confirmar la importación. Revisa la lista y solicita una nueva vista previa antes de reintentar."),
   });
@@ -135,14 +157,23 @@ export default function CreateStudentPage() {
 
       <form id={formId} onSubmit={(event) => {
         event.preventDefault();
-        void perform(() => create.mutateAsync(cleanPayload(form)));
+        if (isScopedAdmin && !hasAdminScope) {
+          showError("Tu cuenta no tiene programa y campus asignados. Solicita que actualicen tu perfil antes de crear estudiantes.");
+          return;
+        }
+        const payload = cleanPayload(form);
+        if (isScopedAdmin) {
+          delete payload.program;
+          delete payload.campus;
+        }
+        void perform(() => create.mutateAsync(payload));
       }}>
       <fieldset disabled={busy} className="min-w-0">
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Datos basicos</CardTitle>
           <CardDescription>
-            Las instrucciones de acceso se envían por correo; el estudiante deberá cambiar la contraseña temporal.
+            Se intenta enviar por correo una contraseña temporal que el estudiante deberá cambiar al iniciar sesión.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
@@ -208,20 +239,38 @@ export default function CreateStudentPage() {
             value={form.eps_affiliation ?? ""}
             onChange={(v) => setForm({ ...form, eps_affiliation: v })}
           />
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="program">Programa</Label>
-            <Select id="program" value={form.program ?? ""} disabled={!academicOptions.data} onChange={(e) => setForm({ ...form, program: e.target.value || undefined })}>
-              <option value="">Selecciona una opción</option>
-              {academicOptions.data?.programs.map((option) => <option key={option} value={option}>{option}</option>)}
-            </Select>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="campus">Campus</Label>
-            <Select id="campus" value={form.campus ?? ""} disabled={!academicOptions.data} onChange={(e) => setForm({ ...form, campus: e.target.value || undefined })}>
-              <option value="">Selecciona una opción</option>
-              {academicOptions.data?.campuses.map((option) => <option key={option} value={option}>{option}</option>)}
-            </Select>
-          </div>
+          {isScopedAdmin ? (
+            <>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="program">Programa asignado</Label>
+                <Input id="program" readOnly value={adminScope?.program ?? ""} aria-busy={currentUser.isLoading} />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="campus">Campus asignado</Label>
+                <Input id="campus" readOnly value={adminScope?.campus ?? ""} aria-busy={currentUser.isLoading} />
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="program">Programa</Label>
+                <Select id="program" value={form.program ?? ""} disabled={!academicOptions.data} onChange={(e) => setForm({ ...form, program: e.target.value || undefined })}>
+                  <option value="">Selecciona una opción</option>
+                  {academicOptions.data?.programs.map((option) => <option key={option} value={option}>{option}</option>)}
+                </Select>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="campus">Campus</Label>
+                <Select id="campus" value={form.campus ?? ""} disabled={!academicOptions.data} onChange={(e) => setForm({ ...form, campus: e.target.value || undefined })}>
+                  <option value="">Selecciona una opción</option>
+                  {academicOptions.data?.campuses.map((option) => <option key={option} value={option}>{option}</option>)}
+                </Select>
+              </div>
+            </>
+          )}
+          {isScopedAdmin && currentUser.isLoading && <p role="status" className="text-sm text-muted-foreground">Cargando tu ámbito académico…</p>}
+          {isScopedAdmin && currentUser.error && <QueryError error={currentUser.error} retry={() => currentUser.refetch({ cancelRefetch: false })} retrying={currentUser.isFetching} />}
+          {isScopedAdmin && currentUser.data && !hasAdminScope && <p role="alert" className="text-sm text-destructive">Tu perfil no tiene un programa y campus asignados. No se puede crear el estudiante.</p>}
           {academicOptions.isLoading && <p role="status" className="text-sm text-muted-foreground">Cargando opciones académicas…</p>}
           {academicOptions.error && <QueryError error={academicOptions.error} retry={() => academicOptions.refetch({ cancelRefetch: false })} retrying={academicOptions.isFetching} />}
           <div className="flex flex-col gap-1.5">
@@ -257,7 +306,7 @@ export default function CreateStudentPage() {
         <CardHeader>
           <CardTitle className="text-base">Importar desde Excel</CardTitle>
           <CardDescription>
-            Usa el mismo archivo de estudiantes del celular. Las instrucciones de acceso se envían por correo.
+            Usa el mismo archivo de estudiantes del celular. Se intenta enviar por correo las instrucciones de acceso.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
@@ -298,7 +347,7 @@ export default function CreateStudentPage() {
 
       {error && <p role="alert">{error}</p>}
       <div className="flex gap-2">
-        <Button type="submit" form={formId} disabled={busy}>
+        <Button type="submit" form={formId} disabled={busy || (isScopedAdmin && (currentUser.isLoading || !hasAdminScope))}>
           {create.isPending ? "Creando..." : "Crear estudiante"}
         </Button>
         <Button variant="ghost" disabled={busy} onClick={() => router.back()}>
@@ -307,6 +356,12 @@ export default function CreateStudentPage() {
       </div>
     </div>
   );
+}
+
+function emailStatusLabel(status: ImportStudentsResponse["results"][number]["email_delivery_status"]): string {
+  if (status === "accepted") return "Proveedor aceptó el correo; la llegada a la bandeja no está confirmada.";
+  if (status === "disabled") return "Correo no enviado: el servicio de correo está deshabilitado.";
+  return "No se confirmó el envío del correo.";
 }
 
 function cleanPayload(form: CreateStudentRequest): CreateStudentRequest {
@@ -391,6 +446,7 @@ function ImportResultPanel({ result }: { result: ImportStudentsResponse }) {
               Fila {row.row} - {row.email ?? "Sin correo"}
             </p>
             <p className="text-xs text-muted-foreground">{row.message}</p>
+            {row.status === "created" && <p className="text-xs text-muted-foreground">{emailStatusLabel(row.email_delivery_status)}</p>}
           </li>
         ))}
       </ul>
