@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from app.modules.auth.models import AuthSession
 from app.modules.notifications.models import DeviceToken, Notification
 from app.modules.users.models import User
-from sqlalchemy import select, update
+from sqlalchemy import and_, exists, or_, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -67,7 +67,10 @@ class NotificationRepository:
             .where(
                 DeviceToken.user_id == user_id,
                 DeviceToken.token == token,
-                DeviceToken.session_id == session_id,
+                or_(
+                    DeviceToken.session_id == session_id,
+                    DeviceToken.session_id.is_(None),
+                ),
             )
             .values(is_active=False, updated_at=datetime.now(timezone.utc))
         )
@@ -75,16 +78,33 @@ class NotificationRepository:
     async def get_active_tokens_by_user(self, user_id: uuid.UUID) -> list[str]:
         result = await self.db.execute(
             select(DeviceToken.token)
-            .join(AuthSession, AuthSession.id == DeviceToken.session_id)
+            .outerjoin(AuthSession, AuthSession.id == DeviceToken.session_id)
             .join(User, User.id == DeviceToken.user_id)
             .where(
                 DeviceToken.user_id == user_id,
                 DeviceToken.is_active.is_(True),
-                AuthSession.status == "ACTIVE",
-                AuthSession.expires_at > datetime.now(timezone.utc),
-                AuthSession.user_id == user_id,
-                AuthSession.auth_version == User.auth_version,
                 User.is_active.is_(True),
+                or_(
+                    and_(
+                        AuthSession.status == "ACTIVE",
+                        AuthSession.expires_at > datetime.now(timezone.utc),
+                        AuthSession.user_id == user_id,
+                        AuthSession.auth_version == User.auth_version,
+                    ),
+                    and_(
+                        # Rows created before session binding have NULL session_id.
+                        # Keep them usable only while this user has a valid session.
+                        DeviceToken.session_id.is_(None),
+                        exists(
+                            select(AuthSession.id).where(
+                                AuthSession.user_id == user_id,
+                                AuthSession.status == "ACTIVE",
+                                AuthSession.expires_at > datetime.now(timezone.utc),
+                                AuthSession.auth_version == User.auth_version,
+                            )
+                        ),
+                    ),
+                ),
             )
         )
         return list(result.scalars().all())
