@@ -110,7 +110,7 @@ Servicios por dominio: `auth`, `users`, `scheme`, `evidence`, `notifications`, `
 ## Diferencias con el frontend Flutter
 
 - **Tokens**: en Flutter se guardan con `flutter_secure_storage`; en web se usa `localStorage` (los JWT del backend ya tienen TTL corto + refresh). Si quieres `httpOnly`, hay que mover el flujo a Server Actions + cookies (ver `node_modules/next/dist/docs/01-app/02-guides/authentication.md`).
-- **Push**: no se implementa Firebase Cloud Messaging web por ahora.
+- **Push web**: Firebase Cloud Messaging registra el navegador como plataforma `web` en `POST /notifications/device-token`. Configura `FIREBASE_WEB_VAPID_KEY` con la clave pública VAPID del mismo proyecto Firebase en el App Service de Next. El service worker usa la configuración pública de `ucc-immunoclinic`; no se debe colocar la clave privada de cuenta de servicio en el frontend.
 - **PDF viewer**: usar `<iframe>` o `react-pdf` cuando se implemente la pantalla de certificado.
 - **Deep link** `immunoclinic://auth/reset-password`: en web equivale a `/reset-password?token=...` (el backend solo necesita cambiar la URL del email).
 
@@ -120,4 +120,3 @@ Servicios por dominio: `auth`, `users`, `scheme`, `evidence`, `notifications`, `
 2. Editar perfil/programa/sede de un estudiante desde `/admin/students/[id]` (endpoint `PUT /admin/students/{id}/profile` ya disponible en `lib/api/admin.ts`).
 3. Editar configuraciÃ³n de dosis al actualizar vacuna (`updateVaccine` ya existe en API; falta UI).
 4. Reemplazar primitives `ui/*` por `shadcn/ui` real (`npx shadcn@latest init`) si se necesitan Dialog, Tabs accesibles, Combobox, etc.
-5. FCM web push para notificaciones en background (`POST /notifications/device-token`).

@@ -125,6 +125,8 @@ async function handle(request: NextRequest, context: { params: Promise<{ path: s
     const headers = new Headers({ Authorization: `Bearer ${result.pair.access_token}` });
     const type = request.headers.get("content-type"); if (type) headers.set("Content-Type", type);
     // Keep FastAPI's trailing slash contracts to avoid 307 on multipart/POST.
+    // Only collection roots use a trailing slash. Nested routes like
+    // /notifications/device-token are exact FastAPI paths and must not redirect.
     const suffix = ["scheme", "evidence", "notifications"].includes(path) ? "/" : "";
     const upstreamResponse = await call(path+suffix+request.nextUrl.search, { method: request.method, headers, body });
     if (upstreamResponse.status === 401 || (path === "auth/change-password" && upstreamResponse.ok)) {

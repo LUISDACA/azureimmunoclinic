@@ -5,6 +5,7 @@ import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { useEffect } from "react";
 import { useAuthStore } from "@/lib/auth/store";
+import { BrowserPushCoordinator } from "@/components/browser-push-coordinator";
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
   useEffect(() => {
@@ -16,6 +17,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider>
       <QueryProvider>
+        <BrowserPushCoordinator />
         {children}
         <Toaster richColors position="top-right" />
       </QueryProvider>

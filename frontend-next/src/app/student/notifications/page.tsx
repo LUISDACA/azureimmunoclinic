@@ -9,6 +9,7 @@ import { NotificationsList } from "@/components/notifications-list";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { canRetainNotificationData, loadNotificationsWithRetention } from "@/lib/ui/notification-query";
+import { BrowserPushSetup } from "@/components/browser-push-setup";
 
 export default function StudentNotificationsPage() {
   const queryClient = useQueryClient();
@@ -54,6 +55,7 @@ export default function StudentNotificationsPage() {
           ) : null
         }
       />
+      <BrowserPushSetup />
       {loadError && (
         <div className="flex flex-col gap-2">
           <QueryError error={loadError} retry={retry} retrying={isFetching} />
