@@ -89,9 +89,9 @@ class NotificationService:
         self,
         user_id: uuid.UUID,
         *,
-        title: str,
-        body: str,
-        use_message_copy: bool,
+        title: str = "ImmunoClinic",
+        body: str = "Tienes una actualización. Abre la aplicación para consultarla.",
+        use_message_copy: bool = False,
     ) -> None:
         if not settings.FCM_ENABLED:
             return

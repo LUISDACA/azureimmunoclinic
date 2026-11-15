@@ -28,7 +28,7 @@ it('keeps failed read synchronization visible through retry and recovers only on
 it.each(['student','admin','app_admin'] as const)('%s creates with the authorized recipient contract',async role=>{
  useAuthStore.setState({role});mount(<CommunicationsPage />);fireEvent.click(screen.getByText('Nuevo mensaje'));
  fireEvent.change(screen.getByLabelText(role==='admin'?'Buscar estudiante':'Buscar administrador'),{target:{value:'Syn'}});
- fireEvent.click(await screen.findByText('Synthetic recipient'));
+ fireEvent.click(await screen.findByText('Synthetic recipient · Administrador'));
  fireEvent.change(screen.getByLabelText('Asunto'),{target:{value:'Synthetic subject'}});
  fireEvent.change(screen.getByLabelText('Mensaje'),{target:{value:'Synthetic message'}});
  fireEvent.click(screen.getByText('Enviar'));
@@ -39,7 +39,7 @@ it.each(['student','admin','app_admin'] as const)('%s creates with the authorize
 it('normal admin can select app administrator, never forges student scope',async()=>{
  useAuthStore.setState({role:'admin'});mount(<CommunicationsPage />);fireEvent.click(screen.getByText('Nuevo mensaje'));
  fireEvent.change(screen.getByLabelText('Destinatario'),{target:{value:'admins'}});fireEvent.change(screen.getByLabelText('Buscar administrador'),{target:{value:'Syn'}});
- await screen.findByText('Synthetic recipient');expect(searchRecipients).toHaveBeenCalledWith('admins','Syn');
+ await screen.findByText('Synthetic recipient · Administrador');expect(searchRecipients).toHaveBeenCalledWith('admins','Syn');
 });
 it.each(['open','closed'] as const)('%s thread has explicit close/reopen confirmation and reply',async status=>{
  useAuthStore.setState({role:'admin',userId:'admin'});

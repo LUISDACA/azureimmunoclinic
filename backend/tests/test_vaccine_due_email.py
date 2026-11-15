@@ -3,6 +3,8 @@ from datetime import date, timedelta
 
 import pytest
 from app.core.config import settings
+from app.modules.notifications.repository import NotificationRepository
+from app.modules.notifications.service import NotificationService
 from app.modules.notifications.router import _verify_cron_secret
 from app.modules.notifications.vaccine_due import _create_reminder_if_needed
 from app.modules.users.models import User
@@ -20,6 +22,17 @@ def _due_info(days_until_due: int) -> DoseDueInfo:
         due_date=date.today() + timedelta(days=days_until_due),
         days_until_due=days_until_due,
     )
+
+
+@pytest.mark.asyncio
+async def test_vaccine_reminder_legacy_push_call_remains_compatible(
+    db: AsyncSession,
+    student_user: User,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setattr(settings, "FCM_ENABLED", False)
+
+    NotificationService(NotificationRepository(db))._send_push_after_commit(student_user.id)
 
 
 @pytest.mark.asyncio
