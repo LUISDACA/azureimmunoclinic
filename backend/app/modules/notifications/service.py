@@ -9,7 +9,7 @@ from app.core.config import settings
 from app.db.session import AsyncSessionLocal
 from app.modules.auth.sessions import active, invalid, lock_session, lock_user
 from app.modules.notifications.models import Notification
-from app.modules.notifications.push import PushNotificationSender
+from app.modules.notifications.push import PushNotificationSender, safe_fcm_error_code
 from app.modules.notifications.repository import NotificationRepository
 from sqlalchemy import event
 
@@ -91,5 +91,9 @@ class NotificationService:
             async with AsyncSessionLocal() as db:
                 tokens = await NotificationRepository(db).get_active_tokens_by_user(user_id)
             await PushNotificationSender().send_to_tokens(tokens, title="", body="")
-        except Exception:
-            logger.warning("Push delivery failed")
+        except Exception as error:
+            logger.warning(
+                "Push delivery raised an error: type=%s code=%s",
+                type(error).__name__,
+                safe_fcm_error_code(error),
+            )

@@ -282,3 +282,11 @@ T-02/T-03 continúan **PARTIAL**. Este despliegue no usa ni valida dataset insti
 - ZIP standalone Next desplegado al App Service de validación (`status=4`, completo). Smoke HTTP: `/login`, `/admin/change-password` y `/api/auth/csrf` **200**. La ruta autenticada necesita verificación visual manual de una sesión temporal real.
 - SCM volvió a quedar con regla `/32` previamente aprobada y `Deny all`; la regla temporal usada para este despliegue fue retirada. No se cambiaron secretos ni datos.
 - El usuario puede recargar la página de cambio obligatorio para ver el formulario sin el aviso 403 ni la navegación de módulos.
+
+## Diagnóstico de FCM en backend de validación — 2026-11-15
+
+- El emisor push ahora registra cuando no hay tokens activos, faltan credenciales o Firebase rechaza envíos. Para respuestas multicast registra cantidades de destinos, éxitos, fallos y códigos de error sanitizados; nunca registra tokens, contenido ni identificadores de usuario.
+- El servicio también registra tipo y código sanitizado de excepciones. No cambia contratos, reglas clínicas, esquema de base de datos ni configuración de FCM.
+- Azure confirmó `FCM_ENABLED=true` y que existe `FIREBASE_CREDENTIALS_JSON`; el valor secreto no se leyó. El App Service `ic-validation-6uj5qzgnzi` quedó `RuntimeSuccessful`, con una instancia saludable y `/` respondiendo `healthy`.
+- La publicación requirió una regla SCM temporal `/32`; se retiró al terminar. SCM conserva default `Deny`, la allowlist aprobada y `Deny all`. No se cambiaron secretos ni el acceso público de la API.
+- El diagnóstico remoto sigue **PENDIENTE** hasta que se genere una notificación nueva después del despliegue. No se creó ni modificó ninguna cuenta o dato clínico. No hay cambios de esquema; rollback mediante redeploy del paquete de backend anterior.

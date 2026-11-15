@@ -1,3 +1,5 @@
+from types import SimpleNamespace
+
 import pytest
 from app.modules.notifications.repository import NotificationRepository
 from sqlalchemy.ext.asyncio import async_sessionmaker
@@ -46,8 +48,19 @@ async def test_push_transport_never_includes_clinical_input(monkeypatch):
 
     captured = []
     monkeypatch.setattr(push, "_firebase_app", lambda: object())
+
+    def capture(message, app):
+        captured.append(message)
+        return SimpleNamespace(
+            success_count=1,
+            failure_count=0,
+            responses=[SimpleNamespace(success=True, exception=None)],
+        )
+
     monkeypatch.setattr(
-        push.messaging, "send_each_for_multicast", lambda message, app: captured.append(message)
+        push.messaging,
+        "send_each_for_multicast",
+        capture,
     )
     await push.PushNotificationSender().send_to_tokens(
         ["synthetic-token"],
@@ -58,3 +71,49 @@ async def test_push_transport_never_includes_clinical_input(monkeypatch):
     message = captured[0]
     assert message.data == {"event": "updates_available"}
     assert "SENSITIVE" not in message.notification.title + message.notification.body
+
+
+@pytest.mark.asyncio
+async def test_push_logs_fcm_failure_code_without_logging_token_or_payload(monkeypatch, caplog):
+    import logging
+
+    from app.modules.notifications import push
+
+    token = "synthetic-private-device-token"
+    monkeypatch.setattr(push, "_firebase_app", lambda: object())
+    monkeypatch.setattr(
+        push.messaging,
+        "send_each_for_multicast",
+        lambda message, app: SimpleNamespace(
+            success_count=0,
+            failure_count=1,
+            responses=[
+                SimpleNamespace(
+                    success=False,
+                    exception=SimpleNamespace(code="messaging/sender-id-mismatch"),
+                )
+            ],
+        ),
+    )
+
+    with caplog.at_level(logging.INFO, logger="app.modules.notifications.push"):
+        await push.PushNotificationSender().send_to_tokens(
+            [token], title="PRIVATE TITLE", body="PRIVATE BODY"
+        )
+
+    assert "messaging/sender-id-mismatch" in caplog.text
+    assert "targets=1" in caplog.text
+    assert token not in caplog.text
+    assert "PRIVATE" not in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_push_logs_when_no_device_token_is_registered(caplog):
+    import logging
+
+    from app.modules.notifications.push import PushNotificationSender
+
+    with caplog.at_level(logging.INFO, logger="app.modules.notifications.push"):
+        await PushNotificationSender().send_to_tokens([], title="", body="")
+
+    assert "no active device tokens" in caplog.text
