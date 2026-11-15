@@ -4,8 +4,8 @@ from datetime import date, timedelta
 import pytest
 from app.core.config import settings
 from app.modules.notifications.repository import NotificationRepository
-from app.modules.notifications.service import NotificationService
 from app.modules.notifications.router import _verify_cron_secret
+from app.modules.notifications.service import NotificationService
 from app.modules.notifications.vaccine_due import _create_reminder_if_needed
 from app.modules.users.models import User
 from app.modules.vaccination_scheme.rules import DoseDueInfo
