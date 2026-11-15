@@ -6,7 +6,7 @@ import io
 import os
 import re
 import uuid
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 from html import unescape
 from urllib.parse import parse_qs, urlparse
 
@@ -27,6 +27,7 @@ from app.modules.certificates.service import CertificateService
 from app.modules.certificates.signature_service import CertificateSignatureService
 from app.modules.users.models import User
 from app.modules.vaccination_scheme.repository import SchemeRepository, VaccineRepository
+from app.modules.vaccination_scheme.rules import clinical_today
 from app.modules.vaccination_scheme.service import SchemeService
 from app.storage.base import get_storage_service
 from PIL import Image
@@ -139,7 +140,7 @@ async def test_login_scheme_evidence_review_certificate(
         await client.put(
             f"/api/v1/scheme/doses/{dose_id}",
             headers=student,
-            json={"applied_date": date.today().isoformat()},
+            json={"applied_date": clinical_today().isoformat()},
         )
     ).status_code == 200
     pdf = io.BytesIO()
