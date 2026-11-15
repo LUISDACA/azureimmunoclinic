@@ -286,6 +286,8 @@ T-02/T-03 continúan **PARTIAL**. Este despliegue no usa ni valida dataset insti
 ## Diagnóstico de FCM en backend de validación — 2026-11-15
 
 - El emisor push ahora registra cuando no hay tokens activos, faltan credenciales o Firebase rechaza envíos. Para respuestas multicast registra cantidades de destinos, éxitos, fallos y códigos de error sanitizados; nunca registra tokens, contenido ni identificadores de usuario.
+- El mensaje Android usa prioridad alta y el canal `immuno_clinic_updates`, que crea Flutter al iniciar. El título y el cuerpo del aviso son genéricos y no incluyen información clínica.
+- El ajuste se desplegó en `ic-validation-6uj5qzgnzi` con estado `RuntimeSuccessful`, una instancia exitosa y cero fallidas; el endpoint de salud responde `healthy`.
 - El servicio también registra tipo y código sanitizado de excepciones. No cambia contratos, reglas clínicas, esquema de base de datos ni configuración de FCM.
 - Azure confirmó `FCM_ENABLED=true` y que existe `FIREBASE_CREDENTIALS_JSON`; el valor secreto no se leyó. El App Service `ic-validation-6uj5qzgnzi` quedó `RuntimeSuccessful`, con una instancia saludable y `/` respondiendo `healthy`.
 - La publicación requirió una regla SCM temporal `/32`; se retiró al terminar. SCM conserva default `Deny`, la allowlist aprobada y `Deny all`. No se cambiaron secretos ni el acceso público de la API.

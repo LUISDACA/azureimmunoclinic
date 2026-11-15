@@ -76,6 +76,12 @@ class PushNotificationSender:
                 title="ImmunoClinic",
                 body="Tienes una actualización. Abre la aplicación para consultarla.",
             ),
+            android=messaging.AndroidConfig(
+                priority="high",
+                notification=messaging.AndroidNotification(
+                    channel_id="immuno_clinic_updates",
+                ),
+            ),
             data=payload,
         )
         response = await asyncio.to_thread(
