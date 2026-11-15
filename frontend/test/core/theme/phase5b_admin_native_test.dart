@@ -140,7 +140,6 @@ Future<void> _draft(WidgetTester t) async {
   await _waitForAcademicOptions(t);
   for (final e in {
     'Correo': 'new-admin@example.com',
-    'Contraseña': 'SyntheticOnly123!',
     'Nombre': 'Synthetic',
     'Apellido': 'Administrator',
   }.entries) {
@@ -330,13 +329,12 @@ void main() {
           expect(removing ? api.removes.length : api.creates.length, 1);
           if (!removing) {
             expect(
-              t
-                  .widget<TextFormField>(
-                    find.widgetWithText(TextFormField, 'Contraseña'),
-                  )
-                  .controller!
-                  .text,
-              isEmpty,
+              find.widgetWithText(TextFormField, 'Contraseña'),
+              findsNothing,
+            );
+            expect(
+              find.textContaining('Se generará una contraseña temporal'),
+              findsOneWidget,
             );
             expect(
               t
@@ -432,6 +430,7 @@ void main() {
     expect(api.creates.length, 1);
     expect(api.payloads.single['program'], 'Enfermería');
     expect(api.payloads.single['campus'], 'Bogotá');
+    expect(api.payloads.single.containsKey('password'), isFalse);
     for (final field in t.widgetList<TextFormField>(
       find.byType(TextFormField),
     )) {

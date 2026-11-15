@@ -2,10 +2,16 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/error/api_error_message.dart';
+import '../../../../core/models/user_model.dart';
 import '../../../../core/utils/file_download.dart';
+import '../../../auth/data/datasources/auth_remote_ds.dart';
 import '../../data/datasources/admin_remote_ds.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../data/models/admin_models.dart';
+
+final currentAdminUserProvider = FutureProvider<UserModel>((ref) {
+  return ref.read(authRemoteDataSourceProvider).getCurrentUser();
+});
 
 class AdminStudentListState {
   final bool isLoading;

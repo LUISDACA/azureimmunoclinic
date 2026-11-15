@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/utils/account_creation_notice.dart';
 import '../../../../core/utils/role_utils.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../shared/presentation/widgets/local_paged_list.dart';
@@ -85,6 +86,17 @@ class _State extends ConsumerState<CreateStudentScreen> {
   Future<void> _submit() async {
     if (_busy || !_formKey.currentState!.validate()) return;
     final canChooseScope = isAppAdminRole(ref.read(authStateProvider).role);
+    if (!canChooseScope) {
+      final profile = ref.read(currentAdminUserProvider).valueOrNull?.profile;
+      if (profile?.program?.trim().isNotEmpty != true ||
+          profile?.campus?.trim().isNotEmpty != true) {
+        setState(() {
+          _err =
+              'No se pudo verificar tu programa y campus. Reintenta la consulta antes de crear el estudiante.';
+        });
+        return;
+      }
+    }
     setState(() {
       _loading = true;
       _err = null;
@@ -116,9 +128,23 @@ class _State extends ConsumerState<CreateStudentScreen> {
         data['program'] = _program;
         data['campus'] = _campus;
       }
-      await ref.read(adminRemoteDataSourceProvider).createStudent(data);
+      final result = await ref
+          .read(adminRemoteDataSourceProvider)
+          .createStudent(data);
       if (mounted) {
         _invalidateAdminStatistics();
+        final messenger = ScaffoldMessenger.of(context);
+        messenger.hideCurrentSnackBar();
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              accountCreationNotice(
+                accountType: 'Estudiante',
+                emailDeliveryStatus: result['email_delivery_status'],
+              ),
+            ),
+          ),
+        );
         Navigator.pop(context, true);
       }
     } catch (error) {
@@ -302,9 +328,16 @@ class _State extends ConsumerState<CreateStudentScreen> {
   );
 
   Future<void> _showImportResult(Map<String, dynamic> result) async {
-    final rows = (result['results'] as List<dynamic>? ?? [])
-        .where((row) => row['status'] != 'created')
+    final importRows = (result['results'] as List<dynamic>? ?? [])
+        .whereType<Map<String, dynamic>>()
         .toList();
+    final createdRows = importRows
+        .where((row) => row['status'] == 'created')
+        .toList();
+    final unconfirmedEmails = createdRows
+        .where((row) => row['email_delivery_status'] != 'accepted')
+        .length;
+    final rows = importRows;
 
     await showDialog<void>(
       context: context,
@@ -319,10 +352,19 @@ class _State extends ConsumerState<CreateStudentScreen> {
               Text('Creados: ${result['created'] ?? 0}'),
               Text('Omitidos: ${result['skipped'] ?? 0}'),
               Text('Errores: ${result['errors'] ?? 0}'),
+              if (createdRows.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    unconfirmedEmails == 0
+                        ? 'El proveedor aceptó ${createdRows.length} correo(s); la llegada a la bandeja no está confirmada.'
+                        : 'No se confirmó el envío de $unconfirmedEmails correo(s). No vuelvas a importar esas cuentas; solicita ayuda para habilitar el acceso.',
+                  ),
+                ),
               if (rows.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 const Text(
-                  'Filas por revisar',
+                  'Resultados por fila',
                   style: TextStyle(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 8),
@@ -330,9 +372,36 @@ class _State extends ConsumerState<CreateStudentScreen> {
                   itemCount: rows.length,
                   itemBuilder: (context, index) {
                     final row = rows[index];
-                    return Text(
-                      'Fila ${row['row']}: ${row['message']}',
-                      style: const TextStyle(fontSize: 12),
+                    final status = row['email_delivery_status'];
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Fila ${row['row']} · ${row['email'] ?? 'Sin correo'}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          Text(
+                            row['message']?.toString() ?? '',
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                          if (row['status'] == 'created')
+                            Text(switch (status) {
+                              'accepted' =>
+                                'El proveedor aceptó el correo; la llegada a la bandeja no está confirmada.',
+                              'disabled' =>
+                                'El servicio de correo está deshabilitado.',
+                              'failed' =>
+                                'No se confirmó el envío. No vuelvas a importar esta cuenta; solicita ayuda para habilitar el acceso.',
+                              _ =>
+                                'No se pudo confirmar el estado del correo. No vuelvas a importar esta cuenta; solicita ayuda para habilitar el acceso.',
+                            }, style: const TextStyle(fontSize: 12)),
+                        ],
+                      ),
                     );
                   },
                 ),
@@ -354,6 +423,14 @@ class _State extends ConsumerState<CreateStudentScreen> {
   Widget build(BuildContext context) {
     final academicOptions = ref.watch(academicOptionsProvider);
     final canChooseScope = isAppAdminRole(ref.watch(authStateProvider).role);
+    final currentAdminUser = canChooseScope
+        ? null
+        : ref.watch(currentAdminUserProvider);
+    final adminProfile = currentAdminUser?.valueOrNull?.profile;
+    final hasAdminScope =
+        adminProfile?.program?.trim().isNotEmpty == true &&
+        adminProfile?.campus?.trim().isNotEmpty == true;
+    final scopeReady = canChooseScope || hasAdminScope;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Crear Estudiante')),
@@ -544,6 +621,54 @@ class _State extends ConsumerState<CreateStudentScreen> {
                       ? null
                       : (value) => setState(() => _campus = value),
                 ),
+              ] else ...[
+                if (currentAdminUser!.isLoading)
+                  Semantics(
+                    liveRegion: true,
+                    child: Padding(
+                      padding: EdgeInsets.only(top: 8),
+                      child: Text('Cargando tu programa y campus asignados…'),
+                    ),
+                  ),
+                if (currentAdminUser.hasError)
+                  Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'No se pudo cargar tu programa y campus asignados.',
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () =>
+                            ref.invalidate(currentAdminUserProvider),
+                        child: const Text('Reintentar'),
+                      ),
+                    ],
+                  ),
+                if (currentAdminUser.hasValue && !hasAdminScope)
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Tu cuenta no tiene programa y campus asignados. No se puede crear el estudiante.',
+                    ),
+                  ),
+                if (hasAdminScope) ...[
+                  TextFormField(
+                    initialValue: adminProfile!.program,
+                    readOnly: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Programa asignado',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    initialValue: adminProfile.campus,
+                    readOnly: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Campus asignado',
+                    ),
+                  ),
+                ],
               ],
               const SizedBox(height: 12),
               TextFormField(
@@ -569,7 +694,7 @@ class _State extends ConsumerState<CreateStudentScreen> {
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: _busy ? null : _submit,
+                  onPressed: _busy || !scopeReady ? null : _submit,
                   child: Text(_loading ? 'Creando...' : 'Crear Estudiante'),
                 ),
               ),

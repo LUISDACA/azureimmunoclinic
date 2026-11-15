@@ -45,6 +45,24 @@ class _Api implements ApiClient {
         },
       ),
     );
+    when(() => dio.get<dynamic>('/users/me')).thenAnswer(
+      (_) async => Response(
+        requestOptions: RequestOptions(path: '/users/me'),
+        data: {
+          'id': 'synthetic-admin',
+          'email': 'synthetic-admin@example.invalid',
+          'role': 'admin',
+          'is_active': true,
+          'profile': {
+            'first_name': 'Synthetic',
+            'last_name': 'Admin',
+            'sex': 'male',
+            'program': 'Medicina',
+            'campus': 'Bogotá',
+          },
+        },
+      ),
+    );
     for (final path in [
       '/admin/students',
       '/admin/students/import/preview',
@@ -155,6 +173,47 @@ Future<void> _mount(
   await _paint(t);
 }
 
+Future<void> _mountStudentCreateRoute(WidgetTester t, _Api api) async {
+  t.view.physicalSize = const Size(390, 844);
+  t.view.devicePixelRatio = 1;
+  addTearDown(t.view.resetPhysicalSize);
+  addTearDown(t.view.resetDevicePixelRatio);
+  await t.pumpWidget(
+    ProviderScope(
+      overrides: [
+        apiClientProvider.overrideWithValue(api),
+        authStateProvider.overrideWith(
+          (ref) => MockAuthNotifier(
+            const AuthState(
+              isAuthenticated: true,
+              role: 'admin',
+              userId: 'synthetic-admin',
+            ),
+          ),
+        ),
+      ],
+      child: MaterialApp(
+        theme: AppTheme.lightTheme,
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => Center(
+              child: ElevatedButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const CreateStudentScreen(),
+                  ),
+                ),
+                child: const Text('Abrir formulario de estudiante'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+  await _paint(t);
+}
+
 Finder get _import => find.byType(OutlinedButton).first;
 Future<void> _tap(WidgetTester t, Finder finder) async {
   await t.ensureVisible(finder);
@@ -248,6 +307,36 @@ void main() {
     await _paint(t);
     expect(api.calls, isEmpty);
   });
+  testWidgets('scoped admin sees assigned academic scope read-only', (t) async {
+    final api = _Api();
+    await _mount(t, api, GlobalKey());
+
+    expect(find.text('Programa asignado'), findsOneWidget);
+    expect(find.text('Campus asignado'), findsOneWidget);
+    expect(find.text('Medicina'), findsOneWidget);
+    expect(find.text('Bogotá'), findsOneWidget);
+    expect(find.byType(DropdownButtonFormField<String>), findsOneWidget);
+  });
+  testWidgets('student creation reports email failure after returning', (
+    t,
+  ) async {
+    final api = _Api();
+    await _mountStudentCreateRoute(t, api);
+    await _tap(t, find.text('Abrir formulario de estudiante'));
+    await _fill(t);
+    (await _submitAction(t))();
+    await _paint(t);
+    expect(api.calls.single.path, '/admin/students');
+
+    api.success({'email_delivery_status': 'failed'});
+    await _paint(t);
+
+    expect(
+      find.textContaining('el proveedor no confirmó el envío'),
+      findsOneWidget,
+    );
+    expect(t.takeException(), isNull);
+  });
   testWidgets(
     'same-frame submits create once and freeze manual and import controls',
     (t) async {
@@ -261,8 +350,10 @@ void main() {
       expect(api.calls.length, 1);
       expect(api.calls.single.path, '/admin/students');
       expect((api.calls.single.data as Map)['sex'], 'male');
+      expect((api.calls.single.data as Map).containsKey('program'), isFalse);
+      expect((api.calls.single.data as Map).containsKey('campus'), isFalse);
       for (final f in t.widgetList<TextFormField>(find.byType(TextFormField))) {
-        expect(f.enabled, isFalse);
+        if (f.controller != null) expect(f.enabled, isFalse);
       }
       expect(t.widget<OutlinedButton>(_import).onPressed, isNull);
       api.fail();
@@ -292,7 +383,7 @@ void main() {
       await _paint(t);
       expect(picker.requests.length, 1);
       for (final f in t.widgetList<TextFormField>(find.byType(TextFormField))) {
-        expect(f.enabled, isFalse);
+        if (f.controller != null) expect(f.enabled, isFalse);
       }
       picker.requests.last.complete(null);
       await _paint(t);
@@ -375,10 +466,32 @@ void main() {
         'created': 1,
         'skipped': 0,
         'errors': 0,
-        'results': <dynamic>[],
+        'results': [
+          {
+            'row': 2,
+            'email': 'synthetic-row@example.invalid',
+            'status': 'created',
+            'message': 'Estudiante creado',
+            'email_delivery_status': 'failed',
+          },
+        ],
       });
       await _paint(t);
       expect(find.text('Importación finalizada'), findsOneWidget);
+      expect(
+        find.textContaining('No se confirmó el envío de 1 correo(s)'),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('synthetic-row@example.invalid'),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining(
+          'No se confirmó el envío. No vuelvas a importar esta cuenta',
+        ),
+        findsOneWidget,
+      );
       await _tap(t, find.widgetWithText(TextButton, 'Cerrar'));
       expect(t.widget<OutlinedButton>(_import).onPressed, isNotNull);
       expect(t.takeException(), isNull);

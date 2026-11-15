@@ -140,6 +140,61 @@ void main() {
       },
     );
   }
+  testWidgets('administrator creation exposes a failed email status', (
+    tester,
+  ) async {
+    final api = _Api();
+    when(
+      () => api.dio.post<dynamic>('/admin/admins', data: any(named: 'data')),
+    ).thenAnswer(
+      (_) async => Response(
+        requestOptions: RequestOptions(path: '/admin/admins'),
+        data: {'email_delivery_status': 'failed'},
+      ),
+    );
+    await _mount(tester, api, GlobalKey(), false);
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Correo'),
+      'synthetic-admin@example.invalid',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Nombre'),
+      'Synthetic',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Apellido'),
+      'Admin',
+    );
+
+    await tester.tap(find.byType(DropdownButtonFormField<String>).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Medicina').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(DropdownButtonFormField<String>).last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Bogotá').last);
+    await tester.pumpAndSettle();
+
+    final button = find.widgetWithText(FilledButton, 'Crear administrador');
+    await tester.ensureVisible(button);
+    await tester.tap(button);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining('el proveedor no confirmó el envío'),
+      findsOneWidget,
+    );
+    final payload =
+        verify(
+              () => api.dio.post<dynamic>(
+                '/admin/admins',
+                data: captureAny(named: 'data'),
+              ),
+            ).captured.single
+            as Map;
+    expect(payload.containsKey('password'), isFalse);
+  });
   testWidgets('Flutter reference rejects missing data without POST', (
     tester,
   ) async {
@@ -151,30 +206,13 @@ void main() {
     await tester.tap(button);
     await tester.pumpAndSettle();
     expect(find.text('Correo inválido'), findsOneWidget);
-    expect(find.text('Minimo 8 caracteres'), findsOneWidget);
+    expect(find.widgetWithText(TextFormField, 'Contraseña'), findsNothing);
+    expect(
+      find.textContaining('Se generará una contraseña temporal'),
+      findsOneWidget,
+    );
     expect(find.text('Selecciona un programa'), findsOneWidget);
     expect(find.text('Selecciona un campus'), findsOneWidget);
-    verifyNever(() => api.dio.post<dynamic>(any(), data: any(named: 'data')));
-  });
-  testWidgets('Flutter reference rejects short password without POST', (
-    tester,
-  ) async {
-    final api = _Api();
-    await _mount(tester, api, GlobalKey(), true);
-    await tester.enterText(
-      find.widgetWithText(TextFormField, 'Correo'),
-      'synthetic@example.invalid',
-    );
-    await tester.enterText(
-      find.widgetWithText(TextFormField, 'Contraseña'),
-      'short',
-    );
-    final button = find.widgetWithText(FilledButton, 'Crear administrador');
-    await tester.ensureVisible(button);
-    await tester.pumpAndSettle();
-    await tester.tap(button);
-    await tester.pumpAndSettle();
-    expect(find.text('Minimo 8 caracteres'), findsOneWidget);
     verifyNever(() => api.dio.post<dynamic>(any(), data: any(named: 'data')));
   });
 }

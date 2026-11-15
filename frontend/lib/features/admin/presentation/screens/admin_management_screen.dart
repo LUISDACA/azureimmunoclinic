@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/utils/account_creation_notice.dart';
 import '../../../shared/data/datasources/communication_remote_ds.dart';
 import '../../data/datasources/admin_remote_ds.dart';
 import '../providers/admin_provider.dart';
@@ -18,7 +19,6 @@ class AdminManagementScreen extends ConsumerStatefulWidget {
 class _State extends ConsumerState<AdminManagementScreen> {
   var _formKey = GlobalKey<FormState>();
   final _email = TextEditingController();
-  final _password = TextEditingController();
   final _firstName = TextEditingController();
   final _lastName = TextEditingController();
   final _jobTitle = TextEditingController();
@@ -44,7 +44,6 @@ class _State extends ConsumerState<AdminManagementScreen> {
   @override
   void dispose() {
     _email.dispose();
-    _password.dispose();
     _firstName.dispose();
     _lastName.dispose();
     _jobTitle.dispose();
@@ -103,7 +102,6 @@ class _State extends ConsumerState<AdminManagementScreen> {
     }
     final payload = <String, dynamic>{
       'email': _email.text.trim(),
-      'password': _password.text,
       'first_name': _firstName.text.trim(),
       'last_name': _lastName.text.trim(),
       'job_title': _jobTitle.text.trim().isEmpty ? null : _jobTitle.text.trim(),
@@ -116,10 +114,23 @@ class _State extends ConsumerState<AdminManagementScreen> {
       _confirmedChange = null;
     });
     try {
-      await ref.read(adminRemoteDataSourceProvider).createAdmin(payload);
+      final result = await ref
+          .read(adminRemoteDataSourceProvider)
+          .createAdmin(payload);
       if (!mounted) return;
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            accountCreationNotice(
+              accountType: 'Administrador',
+              emailDeliveryStatus: result['email_delivery_status'],
+            ),
+          ),
+        ),
+      );
       _email.clear();
-      _password.clear();
       _firstName.clear();
       _lastName.clear();
       _jobTitle.clear();
@@ -381,18 +392,12 @@ class _State extends ConsumerState<AdminManagementScreen> {
                                 ],
                               ),
                             const SizedBox(height: 12),
-                            TextFormField(
-                              enabled: !_busy,
-                              controller: _password,
-                              obscureText: true,
-                              decoration: const InputDecoration(
-                                labelText: 'Contraseña',
+                            const Padding(
+                              padding: EdgeInsets.only(bottom: 12),
+                              child: Text(
+                                'Se generará una contraseña temporal y se intentará enviar a este correo. El administrador deberá cambiarla al iniciar sesión.',
                               ),
-                              validator: (v) => v == null || v.length < 8
-                                  ? 'Minimo 8 caracteres'
-                                  : null,
                             ),
-                            const SizedBox(height: 12),
                             Row(
                               children: [
                                 Expanded(
