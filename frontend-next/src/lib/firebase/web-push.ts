@@ -1,7 +1,7 @@
 "use client";
 
 import { apiClient } from "@/lib/api/client";
-import type { Messaging } from "firebase/messaging";
+import type { MessagePayload, Messaging } from "firebase/messaging";
 
 type EnableResult = "enabled" | "permission-required" | "denied" | "unsupported";
 type WebPushConfigResponse = {
@@ -46,11 +46,13 @@ async function getMessagingClient() {
   return { messaging, messagingSdk, serviceWorkerRegistration, vapidKey: config.vapidKey };
 }
 
-function showForegroundNotification() {
+function showForegroundNotification(payload: MessagePayload) {
   if (typeof window === "undefined" || Notification.permission !== "granted") return;
-  const notice = new Notification("ImmunoClinic", {
-    body: "Tienes una actualización. Abre la aplicación para consultarla.",
-    icon: "/favicon.png",
+  const title = payload.notification?.title || "ImmunoClinic";
+  const body = payload.notification?.body || "Tienes una actualización. Abre la aplicación para consultarla.";
+  const notice = new Notification(title, {
+    body,
+    icon: "/brand/ucc_logo_app.png",
     tag: "immunoclinic-updates",
   });
   notice.onclick = () => {

@@ -2,6 +2,7 @@
 
 import uuid
 
+from app.common.enums import Role
 from app.core.dependencies import get_current_active_user
 from app.db.session import get_db
 from app.modules.communications.models import CommunicationMessage, CommunicationThread
@@ -39,6 +40,7 @@ def _user_response(user: User | None) -> ConversationUserResponse | None:
         email=user.email,
         name=name,
         role=user.role.value,
+        job_title=(user.profile.job_title if user.role == Role.ADMIN and user.profile else None),
     )
 
 

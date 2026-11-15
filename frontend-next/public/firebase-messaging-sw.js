@@ -20,4 +20,14 @@ importScripts("https://www.gstatic.com/firebasejs/11.10.0/firebase-app-compat.js
 importScripts("https://www.gstatic.com/firebasejs/11.10.0/firebase-messaging-compat.js");
 
 firebase.initializeApp(self.__IMMUNO_FIREBASE_CONFIG__);
-firebase.messaging();
+const messaging = firebase.messaging();
+
+messaging.onBackgroundMessage((payload) => {
+  const notification = payload.notification || {};
+  return self.registration.showNotification(notification.title || "ImmunoClinic", {
+    body: notification.body || "Tienes una actualización. Abre la aplicación para consultarla.",
+    icon: "/brand/ucc_logo_app.png",
+    tag: "immunoclinic-updates",
+    data: { url: "/" },
+  });
+});

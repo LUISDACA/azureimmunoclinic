@@ -25,6 +25,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { EmptyState, LoadingState } from "@/components/page-header";
 import { QueryError } from "@/components/query-error";
 import { communicationPeer } from "@/lib/ui/communication-peer";
+import { conversationIdentity } from "@/lib/ui/conversation-identity";
 import { useCommunicationReadSync } from "@/lib/query/communication-read-sync";
 
 export function ThreadDetail({ threadId }: { threadId: string }) {
@@ -94,7 +95,7 @@ export function ThreadDetail({ threadId }: { threadId: string }) {
               </span>
               <div>
                 <h2 className="text-lg font-bold">{data.subject}</h2>
-                {peer && <p className="mt-0.5 text-sm text-muted-foreground">{peer.name ?? peer.email}</p>}
+                {peer && <p className="mt-0.5 text-sm text-muted-foreground">{conversationIdentity(peer)}</p>}
               </div>
             </div>
             <Badge
@@ -209,8 +210,10 @@ function Bubble({
   message: CommunicationMessage;
   mine: boolean;
 }) {
-  const senderName =
-    message.sender?.name ?? message.sender?.email ?? "Usuario";
+  const senderName = message.sender?.name ?? message.sender?.email ?? "Usuario";
+  const senderIdentity = message.sender
+    ? conversationIdentity(message.sender)
+    : "Usuario";
   return (
     <div
       className={cn(
@@ -236,7 +239,7 @@ function Bubble({
           <p className="whitespace-pre-wrap">{message.body}</p>
         </div>
         <p className="px-1 text-[11px] text-muted-foreground">
-          {senderName} · {formatDateTime(message.created_at)}
+          {senderIdentity} · {formatDateTime(message.created_at)}
         </p>
       </div>
     </div>

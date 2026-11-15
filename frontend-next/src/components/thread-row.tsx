@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { useAuthStore } from "@/lib/auth/store";
 import { communicationPeer } from "@/lib/ui/communication-peer";
+import { conversationIdentity } from "@/lib/ui/conversation-identity";
 
 export function ThreadRow({
   thread,
@@ -22,6 +23,10 @@ export function ThreadRow({
   const userId = useAuthStore(state => state.userId);
   const peer = communicationPeer(thread, userId);
   const peerName = peer?.name ?? peer?.email;
+  const peerIdentity = peer ? conversationIdentity(peer) : null;
+  const lastSender = thread.last_message_sender
+    ? conversationIdentity(thread.last_message_sender)
+    : null;
   const initials = (peerName?.match(/\b[A-ZÁÉÍÓÚ]/gi) ?? [])
     .slice(0, 2)
     .join("")
@@ -63,11 +68,11 @@ export function ThreadRow({
                       </span>
                     )}
                   </p>
-                  {(peerName || thread.category) && <p className="text-xs text-muted-foreground">
-                    {peerName}
+                  {(peerIdentity || thread.category) && <p className="text-xs text-muted-foreground">
+                    {peerIdentity}
                     {thread.category && (
                       <>
-                        {peerName ? " · " : ""}
+                        {peerIdentity ? " · " : ""}
                         <span className="capitalize">{thread.category}</span>
                       </>
                     )}
@@ -94,6 +99,7 @@ export function ThreadRow({
                       : "text-muted-foreground",
                   )}
                 >
+                  {lastSender && <span className="font-semibold">{lastSender}: </span>}
                   {thread.last_message}
                 </p>
               )}

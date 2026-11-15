@@ -20,8 +20,12 @@ export const metadata: Metadata = {
   description:
     "Gestión de esquemas de vacunación — Universidad Cooperativa de Colombia",
   icons: {
-    icon: "/favicon.png",
-    apple: "/favicon.png",
+    icon: {
+      url: "/brand/ucc_logo_app.png",
+      type: "image/png",
+      sizes: "512x512",
+    },
+    apple: "/brand/ucc_logo_app.png",
   },
 };
 

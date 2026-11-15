@@ -13,6 +13,7 @@ class ConversationUserResponse(BaseModel):
     email: str
     name: str | None = None
     role: str
+    job_title: str | None = None
 
 
 class RecipientSearchRequest(BaseModel):

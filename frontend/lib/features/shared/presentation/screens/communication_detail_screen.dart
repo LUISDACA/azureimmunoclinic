@@ -9,6 +9,7 @@ import '../../../../core/utils/role_utils.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../data/datasources/communication_remote_ds.dart';
 import '../communication_error.dart';
+import '../conversation_identity.dart';
 import '../providers/notification_provider.dart';
 import '../widgets/communication_query_error.dart';
 
@@ -351,7 +352,7 @@ class _ThreadHeader extends StatelessWidget {
           ),
           if (participant != null)
             Text(
-              'Con: ${_userLabel(participant)}',
+              'Con: ${conversationIdentity(participant)}',
               style: TextStyle(
                 fontSize: 13,
                 color: colorScheme.onSurfaceVariant,
@@ -373,19 +374,6 @@ class _ThreadHeader extends StatelessWidget {
       }
     }
     return null;
-  }
-
-  String _userLabel(Map<String, dynamic> user) {
-    final name = user['name']?.toString();
-    final email = user['email']?.toString() ?? '';
-    final role = user['role']?.toString();
-    final prefix = role == 'admin'
-        ? 'Admin: '
-        : role == 'app_admin'
-        ? 'Admin app: '
-        : '';
-    if (name != null && name.trim().isNotEmpty) return '$prefix$name <$email>';
-    return '$prefix$email';
   }
 }
 
@@ -435,7 +423,7 @@ class _MessageBubble extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _senderName(sender),
+                  conversationIdentity(sender),
                   style: TextStyle(
                     fontWeight: FontWeight.w700,
                     color: isMine ? Colors.black : colorScheme.onSurface,
@@ -467,13 +455,6 @@ class _MessageBubble extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  String _senderName(Map<String, dynamic>? sender) {
-    if (sender == null) return 'Usuario';
-    final name = sender['name']?.toString();
-    if (name != null && name.trim().isNotEmpty) return name;
-    return sender['email']?.toString() ?? 'Usuario';
   }
 }
 

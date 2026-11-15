@@ -28,6 +28,9 @@ class NotificationService:
         title: str,
         message: str,
         category: str | None = None,
+        *,
+        push_title: str | None = None,
+        push_message: str | None = None,
     ) -> Notification:
         notification = Notification(
             user_id=user_id,
@@ -38,7 +41,12 @@ class NotificationService:
             created_at=datetime.now(timezone.utc),
         )
         notification = await self.repo.create(notification)
-        self._send_push_after_commit(user_id)
+        self._send_push_after_commit(
+            user_id,
+            title=push_title or "ImmunoClinic",
+            body=push_message or "Tienes una actualización. Abre la aplicación para consultarla.",
+            use_message_copy=push_title is not None and push_message is not None,
+        )
         return notification
 
     async def get_user_notifications(self, user_id: uuid.UUID) -> list[Notification]:
@@ -77,20 +85,45 @@ class NotificationService:
         await self.repo.deactivate_device_token(user_id=user_id, token=token, session_id=session_id)
         await self.repo.commit()
 
-    def _send_push_after_commit(self, user_id: uuid.UUID) -> None:
+    def _send_push_after_commit(
+        self,
+        user_id: uuid.UUID,
+        *,
+        title: str,
+        body: str,
+        use_message_copy: bool,
+    ) -> None:
         if not settings.FCM_ENABLED:
             return
 
         @event.listens_for(self.repo.db.sync_session, "after_commit", once=True)
         def _after_commit(_session):
-            asyncio.create_task(self._send_push_to_user(user_id))
+            asyncio.create_task(
+                self._send_push_to_user(
+                    user_id,
+                    title=title,
+                    body=body,
+                    use_message_copy=use_message_copy,
+                )
+            )
 
     @staticmethod
-    async def _send_push_to_user(user_id: uuid.UUID) -> None:
+    async def _send_push_to_user(
+        user_id: uuid.UUID,
+        *,
+        title: str,
+        body: str,
+        use_message_copy: bool,
+    ) -> None:
         try:
             async with AsyncSessionLocal() as db:
                 tokens = await NotificationRepository(db).get_active_tokens_by_user(user_id)
-            await PushNotificationSender().send_to_tokens(tokens, title="", body="")
+            await PushNotificationSender().send_to_tokens(
+                tokens,
+                title=title,
+                body=body,
+                use_message_copy=use_message_copy,
+            )
         except Exception as error:
             logger.warning(
                 "Push delivery raised an error: type=%s code=%s",

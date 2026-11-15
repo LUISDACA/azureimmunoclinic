@@ -165,6 +165,7 @@ export interface ConversationUser {
   email: string;
   name: string | null;
   role: string;
+  job_title?: string | null;
 }
 
 export interface CommunicationMessage {

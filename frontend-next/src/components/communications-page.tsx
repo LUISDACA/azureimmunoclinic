@@ -8,6 +8,7 @@ import { createThread, listThreads, searchRecipients } from "@/lib/api/communica
 import { ConversationUser } from "@/lib/api/types";
 import { useAuthStore } from "@/lib/auth/store";
 import { safeCommunicationReturn } from "@/lib/navigation";
+import { conversationIdentity } from "@/lib/ui/conversation-identity";
 import { ThreadRow } from "@/components/thread-row";
 import { QueryError } from "@/components/query-error";
 import { PageHeader, LoadingState, EmptyState } from "@/components/page-header";
@@ -46,8 +47,8 @@ export function CommunicationsPage() {
       {role === 'admin' && <><Label htmlFor="recipient-target">Destinatario</Label><select id="recipient-target" value={target} onChange={e=>{setTarget(e.target.value as 'admins'|'students');setSelected(null);setSearch('');}}><option value="students">Estudiantes</option><option value="admins">Administrador de aplicación</option></select></>}
       <Label htmlFor="recipient-search">{target==='admins'?'Buscar administrador':'Buscar estudiante'}</Label>
       <Input id="recipient-search" value={search} onChange={e=>{setSearch(e.target.value);setSelected(null);}} placeholder="Nombre o correo (mínimo 2 caracteres)" />
-      {selected ? <p>Seleccionado: {selected.name || selected.email} <Button variant="ghost" onClick={()=>setSelected(null)}>Cambiar destinatario</Button></p> : search.trim().length>=2 && <>
-        {recipients.isFetching ? <LoadingState /> : recipients.error ? <QueryError error={recipients.error} retry={recipients.refetch} /> : recipients.data?.length ? <ul>{recipients.data.map(u=><li key={u.id}><Button variant="ghost" onClick={()=>setSelected(u)}>{u.name || u.email}</Button></li>)}</ul> : <p>No hay destinatarios disponibles.</p>}
+      {selected ? <p>Seleccionado: {conversationIdentity(selected)} <Button variant="ghost" onClick={()=>setSelected(null)}>Cambiar destinatario</Button></p> : search.trim().length>=2 && <>
+        {recipients.isFetching ? <LoadingState /> : recipients.error ? <QueryError error={recipients.error} retry={recipients.refetch} /> : recipients.data?.length ? <ul>{recipients.data.map(u=><li key={u.id}><Button variant="ghost" onClick={()=>setSelected(u)}>{conversationIdentity(u)}</Button></li>)}</ul> : <p>No hay destinatarios disponibles.</p>}
       </>}
       {role==='student' && !selected && <p>Sin destinatario seleccionado, se enviará al equipo administrativo de tu ámbito.</p>}
       <Label htmlFor="category">Categoría</Label><select id="category" value={category} onChange={e=>setCategory(e.target.value)}><option value="general">General</option><option value="scheme">Esquema</option><option value="evidence">Documentos</option><option value="technical">Soporte técnico</option></select>

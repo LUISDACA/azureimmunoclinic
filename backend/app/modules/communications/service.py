@@ -214,22 +214,13 @@ class CommunicationService:
         raise BadRequestException("Tipo de destinatario no válido")
 
     async def _notify_new_thread(self, current_user: User, thread: CommunicationThread) -> None:
+        sender = await self.repo.get_user(current_user.id) or current_user
         if thread.recipient_id is not None and thread.recipient_id != current_user.id:
-            await self.notifications.create_notification(
-                thread.recipient_id,
-                "Nuevo mensaje",
-                f"{current_user.email} abrio una conversacion: {thread.subject}",
-                category="communication",
-            )
+            await self._notify_message_recipient(thread.recipient_id, sender)
             return
 
         if is_admin_role(current_user.role):
-            await self.notifications.create_notification(
-                thread.student_id,
-                "Nuevo mensaje del administrador",
-                f"Se abrió una conversación: {thread.subject}",
-                category="communication",
-            )
+            await self._notify_message_recipient(thread.student_id, sender)
             return
 
         student = await self.repo.get_user(thread.student_id)
@@ -240,30 +231,16 @@ class CommunicationService:
                 and not student_in_admin_scope(admin, student)
             ):
                 continue
-            await self.notifications.create_notification(
-                admin.id,
-                "Nueva consulta de estudiante",
-                f"{current_user.email} abrió una conversación: {thread.subject}",
-                category="communication",
-            )
+            await self._notify_message_recipient(admin.id, sender)
 
     async def _notify_reply(self, current_user: User, thread: CommunicationThread) -> None:
+        sender = await self.repo.get_user(current_user.id) or current_user
         if thread.recipient_id is not None and thread.recipient_id != current_user.id:
-            await self.notifications.create_notification(
-                thread.recipient_id,
-                "Nueva respuesta",
-                f"{current_user.email} respondio en: {thread.subject}",
-                category="communication",
-            )
+            await self._notify_message_recipient(thread.recipient_id, sender)
             return
 
         if thread.created_by_id is not None and thread.created_by_id != current_user.id:
-            await self.notifications.create_notification(
-                thread.created_by_id,
-                "Nueva respuesta",
-                f"{current_user.email} respondio en: {thread.subject}",
-                category="communication",
-            )
+            await self._notify_message_recipient(thread.created_by_id, sender)
             return
 
         if (
@@ -271,21 +248,11 @@ class CommunicationService:
             and thread.student_id == current_user.id
             and thread.created_by_id is not None
         ):
-            await self.notifications.create_notification(
-                thread.created_by_id,
-                "Respuesta de administrador",
-                f"{current_user.email} respondio en: {thread.subject}",
-                category="communication",
-            )
+            await self._notify_message_recipient(thread.created_by_id, sender)
             return
 
         if is_admin_role(current_user.role):
-            await self.notifications.create_notification(
-                thread.student_id,
-                "Respuesta del administrador",
-                f"Hay una respuesta en: {thread.subject}",
-                category="communication",
-            )
+            await self._notify_message_recipient(thread.student_id, sender)
             return
 
         student = await self.repo.get_user(thread.student_id)
@@ -296,9 +263,46 @@ class CommunicationService:
                 and not student_in_admin_scope(admin, student)
             ):
                 continue
-            await self.notifications.create_notification(
-                admin.id,
-                "Respuesta de estudiante",
-                f"{current_user.email} respondió en: {thread.subject}",
-                category="communication",
+            await self._notify_message_recipient(admin.id, sender)
+
+    async def _notify_message_recipient(
+        self,
+        recipient_id: uuid.UUID,
+        sender: User,
+    ) -> None:
+        title, message = self._message_notification_copy(sender)
+        await self.notifications.create_notification(
+            recipient_id,
+            title,
+            message,
+            category="communication",
+            push_title=title,
+            push_message=message,
+        )
+
+    @staticmethod
+    def _message_notification_copy(sender: User) -> tuple[str, str]:
+        profile = sender.profile
+        name = (
+            " ".join(
+                part.strip()
+                for part in (profile.first_name, profile.last_name)
+                if part and part.strip()
             )
+            if profile
+            else ""
+        )
+        title = f"Nuevo mensaje de {name}" if name else "Nuevo mensaje"
+
+        if sender.role == Role.STUDENT:
+            sender_description = "Un estudiante"
+        elif sender.role == Role.APP_ADMIN:
+            sender_description = "El administrador de aplicación"
+        elif sender.role == Role.ADMIN:
+            job_title = profile.job_title.strip() if profile and profile.job_title else ""
+            sender_description = job_title or "El administrador"
+        else:
+            sender_description = "Un usuario"
+
+        message = f"{sender_description} te envió un mensaje. Abre Comunicaciones para leerlo."
+        return title, message

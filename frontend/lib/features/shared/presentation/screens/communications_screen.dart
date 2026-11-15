@@ -9,6 +9,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/role_utils.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../data/datasources/communication_remote_ds.dart';
+import '../conversation_identity.dart';
 import '../providers/communication_provider.dart';
 import '../providers/notification_provider.dart';
 import '../widgets/communication_query_error.dart';
@@ -564,17 +565,15 @@ class _RecipientSearchFieldState extends ConsumerState<_RecipientSearchField> {
                     dense: true,
                     leading: const Icon(Icons.mail_outline),
                     title: Text(
+                      conversationIdentity(user),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    subtitle: Text(
                       user['email']?.toString() ?? '',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    subtitle: _nameOf(user).isEmpty
-                        ? null
-                        : Text(
-                            _nameOf(user),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
                     onTap: () => _select(user),
                   );
                 },
@@ -587,13 +586,7 @@ class _RecipientSearchFieldState extends ConsumerState<_RecipientSearchField> {
   }
 
   String _userLabel(Map<String, dynamic> user) {
-    final email = user['email']?.toString() ?? '';
-    final name = _nameOf(user);
-    return name.isEmpty ? email : '$name <$email>';
-  }
-
-  String _nameOf(Map<String, dynamic> user) {
-    return (user['name']?.toString() ?? '').trim();
+    return conversationIdentity(user);
   }
 }
 
@@ -707,8 +700,21 @@ class _ThreadTileState extends ConsumerState<_ThreadTile> {
           children: [
             if (participant != null)
               Text(
-                'Con: ${_userLabel(participant)}',
+                'Con: ${conversationIdentity(participant)}',
                 style: const TextStyle(fontSize: 12),
+              ),
+            if (thread['last_message_sender'] is Map<String, dynamic>)
+              Text(
+                conversationIdentity(
+                  thread['last_message_sender'] as Map<String, dynamic>,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: hasNewMessage ? FontWeight.w700 : FontWeight.w500,
+                  color: colorScheme.onSurfaceVariant,
+                ),
               ),
             if ((thread['last_message']?.toString() ?? '').isNotEmpty)
               Text(
@@ -749,18 +755,5 @@ class _ThreadTileState extends ConsumerState<_ThreadTile> {
       }
     }
     return null;
-  }
-
-  String _userLabel(Map<String, dynamic> user) {
-    final name = user['name']?.toString();
-    final email = user['email']?.toString() ?? '';
-    final role = user['role']?.toString();
-    final prefix = role == 'admin'
-        ? 'Admin: '
-        : role == 'app_admin'
-        ? 'Admin app: '
-        : '';
-    if (name != null && name.trim().isNotEmpty) return '$prefix$name <$email>';
-    return '$prefix$email';
   }
 }

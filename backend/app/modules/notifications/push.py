@@ -60,6 +60,7 @@ class PushNotificationSender:
         title: str,
         body: str,
         data: dict[str, str] | None = None,
+        use_message_copy: bool = False,
     ) -> None:
         if not tokens:
             logger.info("FCM dispatch skipped: no active device tokens")
@@ -73,8 +74,12 @@ class PushNotificationSender:
         message = messaging.MulticastMessage(
             tokens=tokens,
             notification=messaging.Notification(
-                title="ImmunoClinic",
-                body="Tienes una actualización. Abre la aplicación para consultarla.",
+                title=title if use_message_copy else "ImmunoClinic",
+                body=(
+                    body
+                    if use_message_copy
+                    else "Tienes una actualización. Abre la aplicación para consultarla."
+                ),
             ),
             android=messaging.AndroidConfig(
                 priority="high",
