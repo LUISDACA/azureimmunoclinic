@@ -113,7 +113,7 @@ export default function StudentDashboard() {
           title="Bienvenido"
           subtitle={email ?? "Estudiante"}
           icon={<GraduationCap className="h-6 w-6 text-white" />}
-          trailing={<UccLogo size={76} />}
+          trailing={<UccLogo size={48} />}
         />
       </div>
 

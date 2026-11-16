@@ -104,7 +104,7 @@ function AppAdminDashboard() {
           title="Panel global"
           subtitle={email ?? ""}
           icon={<Settings2 className="h-6 w-6 text-white" />}
-          trailing={<UccLogo size={76} />}
+          trailing={<UccLogo size={64} />}
         />
       </div>
 
@@ -204,7 +204,7 @@ function RegularAdminDashboard() {
           title="Panel administrativo"
           subtitle={email ?? ""}
           icon={<ShieldCheck className="h-6 w-6 text-white" />}
-          trailing={<UccLogo size={76} />}
+          trailing={<UccLogo size={64} />}
         />
       </div>
 

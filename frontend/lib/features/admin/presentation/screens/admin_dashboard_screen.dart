@@ -193,7 +193,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                   title: 'Panel Administrativo',
                   subtitle: auth.email ?? '',
                   icon: Icons.admin_panel_settings_outlined,
-                  trailing: const UccLogo(size: 76),
+                  trailing: const UccLogo(size: 48),
                 ),
                 const SizedBox(height: 24),
 
