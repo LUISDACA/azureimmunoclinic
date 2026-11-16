@@ -11,8 +11,8 @@ real production code path of ``SchemeService`` and ``EvidenceService``.
 
 from __future__ import annotations
 
-from datetime import date
 import uuid
+from datetime import date
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
