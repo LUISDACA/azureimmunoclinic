@@ -11,6 +11,7 @@ from app.modules.vaccination_scheme.repository import SchemeRepository, VaccineR
 from app.modules.vaccination_scheme.rules import (
     clinical_today,
     due_info_by_dose,
+    effective_dose_status,
     evaluate_scheme,
 )
 from app.modules.vaccination_scheme.schemas import (
@@ -44,20 +45,20 @@ async def get_my_scheme(
     vaccines = await service.get_student_scheme(current_user.id)
     evaluation_date = clinical_today()
     evaluation = evaluate_scheme(vaccines, today=evaluation_date)
-    approved_count = sum(1 for v in vaccines if v.status == VaccineStatus.APPROVED)
+    vaccine_responses = [_student_vaccine_response(v) for v in vaccines]
 
     response = SchemeOverviewResponse(
         total_vaccines=len(vaccines),
-        approved_vaccines=approved_count,
-        pending_vaccines=sum(1 for v in vaccines if v.status == VaccineStatus.PENDING),
-        denied_vaccines=sum(1 for v in vaccines if v.status == VaccineStatus.DENIED),
-        in_review_vaccines=sum(1 for v in vaccines if v.status == VaccineStatus.IN_REVIEW),
+        approved_vaccines=sum(1 for v in vaccine_responses if v.status == VaccineStatus.APPROVED),
+        pending_vaccines=sum(1 for v in vaccine_responses if v.status == VaccineStatus.PENDING),
+        denied_vaccines=sum(1 for v in vaccine_responses if v.status == VaccineStatus.DENIED),
+        in_review_vaccines=sum(1 for v in vaccine_responses if v.status == VaccineStatus.IN_REVIEW),
         is_up_to_date=evaluation.is_up_to_date,
         is_complete=evaluation.is_complete,
         is_certifiable=evaluation.is_certifiable,
         evaluated_on=evaluation_date,
         scheme_version=await service.current_scheme_version(current_user.id),
-        vaccines=[_student_vaccine_response(v) for v in vaccines],
+        vaccines=vaccine_responses,
     )
     student_scheme_cache[current_user.id] = response
     return response
@@ -96,6 +97,9 @@ async def update_dose_date(
 
 def _student_vaccine_response(student_vaccine) -> StudentVaccineResponse:
     response = StudentVaccineResponse.model_validate(student_vaccine)
+    response.status = SchemeService.recalculate_vaccine_status(student_vaccine.doses)
+    for dose in response.doses:
+        dose.status = effective_dose_status(dose)
     due_by_dose = due_info_by_dose(student_vaccine)
     for dose in response.doses:
         due_info = due_by_dose.get(dose.id)

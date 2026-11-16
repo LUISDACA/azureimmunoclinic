@@ -17,7 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { VaccineDueBadge } from "@/components/vaccine-due-badge";
 
 function statusColor(status: string): string {
-  return ({ approved: "var(--success)", denied: "var(--destructive)", in_review: "var(--warning)" } as Record<string, string>)[status] ?? "#829196";
+  return ({ approved: "var(--success)", denied: "var(--destructive)", in_review: "var(--warning)", pending: "var(--warning)" } as Record<string, string>)[status] ?? "#829196";
 }
 
 export function AdminDoseRow({
@@ -107,7 +107,7 @@ export function AdminDoseRow({
           )}
         </div>
         </div>
-        {allowed && !reviewAction && (
+        {allowed && dose.applied_date && !reviewAction && (
           <div className="flex w-full shrink-0 flex-wrap items-center gap-2 md:w-auto">
             {!isApproved && (
               <Button

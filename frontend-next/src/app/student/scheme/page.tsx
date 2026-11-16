@@ -225,7 +225,8 @@ function DoseRow({ dose }: { dose: StudentDose }) {
   const [titerValue, setTiterValue] = useState(dose.titer_value ?? "");
 
   const isTiter = dose.dose_config?.dose_type === "titer";
-  const editable = dose.status === "denied" || dose.status === "in_review";
+  const editable =
+    dose.status === "pending" || dose.status === "denied" || dose.status === "in_review";
   const hasRecord = isTiter
     ? Boolean(dose.applied_date) || Boolean(dose.titer_value)
     : Boolean(dose.applied_date);
@@ -391,7 +392,7 @@ function DoseRow({ dose }: { dose: StudentDose }) {
 
 // ── Helpers visuales ─────────────────────────────────────────────────
 
-type DoseOrVaccineStatus = "approved" | "denied" | "in_review";
+type DoseOrVaccineStatus = "approved" | "denied" | "in_review" | "pending";
 
 function statusTone(status: DoseOrVaccineStatus | string, text = false): string {
   switch (status) {
@@ -400,6 +401,8 @@ function statusTone(status: DoseOrVaccineStatus | string, text = false): string 
     case "denied":
       return text ? "var(--destructive-text)" : "var(--destructive)";
     case "in_review":
+      return text ? "var(--warning-text)" : "var(--warning)";
+    case "pending":
       return text ? "var(--warning-text)" : "var(--warning)";
     default:
       return "var(--brand-gray)";
@@ -412,6 +415,7 @@ function statusLabel(status: string): string {
       approved: "Aprobada",
       denied: "Denegada",
       in_review: "En revisión",
+      pending: "Pendiente",
     } as Record<string, string>
   )[status] ?? status;
 }

@@ -715,6 +715,8 @@ function statusColor(status: string, text = false): string {
       return text ? "var(--destructive-text)" : "var(--destructive)";
     case "in_review":
       return text ? "var(--warning-text)" : "var(--warning)";
+    case "pending":
+      return text ? "var(--warning-text)" : "var(--warning)";
     default:
       return "#829196";
   }

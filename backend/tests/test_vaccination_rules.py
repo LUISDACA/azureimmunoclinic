@@ -15,6 +15,7 @@ from app.modules.vaccination_scheme.rules import (
     clinical_today,
     due_info_by_dose,
     due_reminders_for_scheme,
+    effective_dose_status,
     evaluate_scheme,
     vaccine_status_from_certificate_rules,
     validate_application_date,
@@ -115,6 +116,34 @@ def _student_vaccine(
 
 
 class VaccinationRulesTests(unittest.TestCase):
+    def test_pending_and_in_review_are_distinct_domain_statuses(self) -> None:
+        self.assertEqual(DoseStatus.PENDING.value, "pending")
+        self.assertEqual(DoseStatus.IN_REVIEW.value, "in_review")
+        self.assertEqual(VaccineStatus.PENDING.value, "pending")
+        self.assertEqual(VaccineStatus.IN_REVIEW.value, "in_review")
+
+    def test_dose_without_application_date_is_not_in_review(self) -> None:
+        config = _dose_config(dose_number=1, label="Primera dosis")
+        dose = _dose(
+            dose_number=1,
+            config=config,
+            status=DoseStatus.IN_REVIEW,
+        )
+        student_vaccine = _student_vaccine(doses=[dose])
+
+        self.assertEqual(effective_dose_status(dose), DoseStatus.PENDING)
+        self.assertEqual(
+            vaccine_status_from_certificate_rules(student_vaccine.doses),
+            VaccineStatus.PENDING,
+        )
+
+        dose.applied_date = date(2026, 9, 1)
+        self.assertEqual(effective_dose_status(dose), DoseStatus.IN_REVIEW)
+        self.assertEqual(
+            vaccine_status_from_certificate_rules(student_vaccine.doses),
+            VaccineStatus.IN_REVIEW,
+        )
+
     def test_annual_catalog_uses_vaccine_flag_not_dose_type_rule(self) -> None:
         from app.db.seed import _build_vaccine_catalog
 

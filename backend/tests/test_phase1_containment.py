@@ -3,7 +3,7 @@
 from datetime import date, datetime, timezone
 
 import pytest
-from app.common.enums import DoseStatus, Role
+from app.common.enums import DoseStatus, Role, VaccineStatus
 from app.core.config import settings
 from app.core.exceptions import ConflictException, ForbiddenException
 from app.core.security import hash_password, verify_password
@@ -84,7 +84,72 @@ async def test_approved_dose_requires_explicit_review_transition(
         dose.id, admin_user.id, ReviewDoseRequest(status=DoseStatus.IN_REVIEW)
     )
     await service.update_dose(dose.id, student_user.id, UpdateDoseRequest(**payload))
+    assert dose.status == (
+        DoseStatus.PENDING
+        if payload.get("applied_date", date(2025, 1, 1)) is None
+        else DoseStatus.IN_REVIEW
+    )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "review_status",
+    [DoseStatus.IN_REVIEW, DoseStatus.APPROVED, DoseStatus.DENIED],
+)
+async def test_new_scheme_stays_pending_until_student_records_a_date(
+    db, admin_user, student_user, review_status
+):
+    service = SchemeService(SchemeRepository(db), VaccineRepository(db))
+    await VaccineCatalogService(db, service, AuditService(db)).create_vaccine(
+        admin_user,
+        VaccineCreateRequest(
+            name="Pending synthetic",
+            code="PENDING_SYN",
+            dose_configs=[VaccineDoseConfigInput(dose_number=1, label="Primera")],
+        ),
+    )
+
+    vaccine = (await service.get_student_scheme(student_user.id))[0]
+    dose = vaccine.doses[0]
+    assert vaccine.status == VaccineStatus.PENDING
+    assert dose.status == DoseStatus.PENDING
+    with pytest.raises(ConflictException):
+        await service.review_dose(
+            dose.id,
+            admin_user.id,
+            ReviewDoseRequest(status=review_status),
+        )
+
+    await service.update_dose(
+        dose.id,
+        student_user.id,
+        UpdateDoseRequest(applied_date=date(2025, 1, 1)),
+    )
+    await db.refresh(vaccine)
+    await db.refresh(dose)
     assert dose.status == DoseStatus.IN_REVIEW
+    assert vaccine.status == VaccineStatus.IN_REVIEW
+    await service.review_dose(
+        dose.id,
+        admin_user.id,
+        ReviewDoseRequest(status=DoseStatus.IN_REVIEW, admin_notes="Synthetic review"),
+    )
+    await db.refresh(vaccine)
+    await db.refresh(dose)
+    assert dose.reviewed_at is not None
+    assert vaccine.reviewed_at is not None
+
+    await service.update_dose(
+        dose.id,
+        student_user.id,
+        UpdateDoseRequest(applied_date=None),
+    )
+    await db.refresh(vaccine)
+    await db.refresh(dose)
+    assert dose.status == DoseStatus.PENDING
+    assert vaccine.status == VaccineStatus.PENDING
+    assert dose.reviewed_at is None
+    assert vaccine.reviewed_at is None
 
 
 @pytest.mark.asyncio

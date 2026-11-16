@@ -2,9 +2,9 @@
   "data": {
     "total_vaccines": 10,
     "approved_vaccines": 5,
-    "pending_vaccines": 3,
+    "pending_vaccines": 5,
     "denied_vaccines": 0,
-    "in_review_vaccines": 2,
+    "in_review_vaccines": 0,
     "is_up_to_date": false,
     "is_complete": false,
     "is_certifiable": false,

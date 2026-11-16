@@ -6,8 +6,8 @@ Los estados de dominio y las transiciones se deciden en FastAPI. La UI presenta 
 
 | Concepto | Valores/contrato | Quién lo decide | Representación Flutter/Next | Estado |
 |---|---|---|---|---|
-| Estado de dosis/revisión | `IN_REVIEW`, `APPROVED`, `DENIED` (serialización wire según enum API) | FastAPI | etiqueta exacta/localizada | DECIDIDO |
-| `PENDING` de reporte | Agregación/reporting alias de EN REVISIÓN; no estado persistido independiente | FastAPI report projection | filtro/contador reportable | DECIDIDO |
+| Estado de dosis/revisión | `PENDING`, `IN_REVIEW`, `APPROVED`, `DENIED` (serialización wire según enum API) | FastAPI | etiqueta exacta/localizada | DECIDIDO |
+| Estado agregado de vacuna | `PENDING`, `IN_REVIEW`, `APPROVED`, `DENIED`; pendiente y revisión son contadores excluyentes | FastAPI | muestra campo retornado | DECIDIDO |
 | Estado agregado de vacuna | Señal backend calculada con reglas vigentes y titulación; el cliente no deriva | FastAPI | muestra campo retornado | DECIDIDO |
 | AL DÍA | boolean/señal calculada según fechas de evaluación | FastAPI | muestra señal | DECIDIDO |
 | COMPLETO | boolean/señal de todos los requerimientos cubiertos | FastAPI | muestra señal | DECIDIDO |
@@ -20,6 +20,8 @@ Los estados de dominio y las transiciones se deciden en FastAPI. La UI presenta 
 
 | Entidad | Actor | Origen | Acción | Destino | Reglas/efectos | Estado |
 |---|---|---|---|---|---|---|
+| Dosis | Estudiante dueño | PENDING | registrar fecha de aplicación | IN_REVIEW | La fecha debe ser válida y no futura; registrar titulación sin fecha no envía a revisión | DECIDIDO |
+| Dosis | Estudiante dueño | IN_REVIEW | borrar fecha de aplicación | PENDING | Recalcular el estado agregado de la vacuna | DECIDIDO |
 | Dosis | Estudiante dueño | DENIED | corregir/reenviar dosis | IN_REVIEW | Nunca autoaprobar; limpiar solo metadatos de revisión invalidada según historial preservado | DECIDIDO |
 | Dosis | Estudiante | APPROVED | editar campos clínicos | Sin transición/edición rechazada | Requiere conservar regla de protección existente; decisión de 3B no la relaja | DECIDIDO (regla preservada) |
 | Dosis | Admin normal autorizado | IN_REVIEW, APPROVED o DENIED | revisión explícita | uno de los estados permitidos por dominio | El backend valida transición y autorización, audita actor/tiempo; no asumir aprobación por carga/edición | DECIDIDO |
@@ -38,5 +40,12 @@ Los estados de dominio y las transiciones se deciden en FastAPI. La UI presenta 
 - Un resultado clínico se calcula del lado servidor y no se confía en valores enviados por el cliente.
 - La actualización DENIED -> IN_REVIEW y la revisión transaccional evidencia+dosis deben usar bloqueos que impidan resultados parciales o carreras; cambios de versión no sobrescriben filas históricas.
 - Estado derivado de una vacuna, AL DÍA, COMPLETO y CERTIFICABLE son señales distintas; no reutilizar el mismo enum para ocultar semánticas diferentes.
-- `PENDING` solo puede aparecer como alias de agregación en reporte, nunca como un cuarto estado clínico nuevo.
+- Una dosis sin fecha no puede quedar EN REVISIÓN; el backend normaliza las filas históricas y rechaza la transición explícita sin fecha.
+- `PENDING` es un estado persistido distinto de `IN_REVIEW`; los contadores del esquema son excluyentes.
 - Estados históricos desconocidos se preservan durante lectura/migración hasta resolver su mapeo; no reemplazarlos por aprobación o denegación por defecto.
+
+## Migración y rollback
+
+- `2026_11_15_0100` mueve dosis activas `IN_REVIEW` sin fecha a `PENDING` y recalcula solo agregados activos sin datos de revisión ni notas.
+- Las respuestas de esquema normalizan registros antiguos sin fecha mientras la migración está pendiente.
+- Rollback: ejecutar el downgrade revierte las filas activas pendientes sin fecha al estado legacy `IN_REVIEW`. No ejecutar cambios de producción hasta contar con aprobación operativa.

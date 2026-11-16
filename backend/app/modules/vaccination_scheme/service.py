@@ -138,7 +138,7 @@ class SchemeService:
                 assignment = StudentVaccine(
                     user_id=user_id,
                     vaccine_id=vaccine.id,
-                    status=VaccineStatus.IN_REVIEW,
+                    status=VaccineStatus.PENDING,
                     is_active=True,
                 )
                 self.scheme_repo.db.add(assignment)
@@ -168,7 +168,7 @@ class SchemeService:
                         student_vaccine_id=assignment.id,
                         dose_config_id=config_id,
                         dose_number=config.dose_number,
-                        status=DoseStatus.IN_REVIEW,
+                        status=DoseStatus.PENDING,
                         is_active=applies,
                     )
                     self.scheme_repo.db.add(new_dose)
@@ -368,10 +368,11 @@ class SchemeService:
         if titer_value_was_updated:
             dose.titer_value = data.titer_value
 
-        if (
-            applied_date_was_updated or titer_value_was_updated
-        ) and dose.status == DoseStatus.DENIED:
-            dose.status = DoseStatus.IN_REVIEW
+        dose_fields_were_updated = applied_date_was_updated or titer_value_was_updated
+        if dose_fields_were_updated and dose.status != DoseStatus.APPROVED:
+            dose.status = (
+                DoseStatus.IN_REVIEW if dose.applied_date is not None else DoseStatus.PENDING
+            )
             dose.admin_notes = None
             dose.reviewed_by = None
             dose.reviewed_at = None
@@ -424,6 +425,9 @@ class SchemeService:
         if dose is None:
             raise NotFoundException("Dose", str(dose_id))
 
+        if data.status != DoseStatus.PENDING and dose.applied_date is None:
+            raise ConflictException("La dosis necesita una fecha antes de iniciar su revisión.")
+
         dose.status = data.status
         dose.admin_notes = data.admin_notes
         dose.reviewed_by = admin_id
@@ -453,8 +457,8 @@ class SchemeService:
         Rules (validated from v1):
         - All required doses approved → vaccine approved
         - Any dose denied → vaccine denied
-        - Any dose in_review and none denied → vaccine in_review
-        - Otherwise → vaccine in_review (the report label may be PENDING)
+        - Any dated dose in_review and none denied → vaccine in_review
+        - Otherwise → vaccine pending
         """
         return vaccine_status_from_certificate_rules(doses)
 

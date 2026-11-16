@@ -34,7 +34,11 @@ from app.modules.evidence.schemas import EvidenceBatchResponse
 from app.modules.evidence.service import EvidenceService
 from app.modules.users.models import User
 from app.modules.users.schemas import UserResponse
-from app.modules.vaccination_scheme.rules import due_info_by_dose
+from app.modules.vaccination_scheme.rules import (
+    due_info_by_dose,
+    effective_dose_status,
+    vaccine_status_from_certificate_rules,
+)
 from app.modules.vaccination_scheme.schemas import (
     ReviewDoseRequest,
     StudentVaccineResponse,
@@ -348,6 +352,9 @@ async def get_student_scheme(
 def _admin_vaccine_response(student_vaccine) -> StudentVaccineResponse:
     """Build a StudentVaccineResponse enriched with per-dose due-date info."""
     response = StudentVaccineResponse.model_validate(student_vaccine)
+    response.status = vaccine_status_from_certificate_rules(student_vaccine.doses)
+    for dose in response.doses:
+        dose.status = effective_dose_status(dose)
     due_by_dose = due_info_by_dose(student_vaccine)
     for dose in response.doses:
         info = due_by_dose.get(dose.id)

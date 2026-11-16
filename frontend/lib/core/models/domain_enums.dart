@@ -1,6 +1,7 @@
 /// Wire enums whose values are defined by FastAPI's shared domain enums.
 enum DoseStatus {
   inReview('in_review'),
+  pending('pending'),
   approved('approved'),
   denied('denied'),
   unknown('');
@@ -8,16 +9,15 @@ enum DoseStatus {
   const DoseStatus(this.wireValue);
   final String wireValue;
 
-  static DoseStatus fromWire(String? value) => value == 'pending'
-      ? DoseStatus.inReview
-      : DoseStatus.values.firstWhere(
-          (status) => status != DoseStatus.unknown && status.wireValue == value,
-          orElse: () => DoseStatus.unknown,
-        );
+  static DoseStatus fromWire(String? value) => DoseStatus.values.firstWhere(
+    (status) => status != DoseStatus.unknown && status.wireValue == value,
+    orElse: () => DoseStatus.unknown,
+  );
 }
 
 enum VaccineStatus {
   inReview('in_review'),
+  pending('pending'),
   approved('approved'),
   denied('denied'),
   unknown('');
@@ -25,13 +25,12 @@ enum VaccineStatus {
   const VaccineStatus(this.wireValue);
   final String wireValue;
 
-  static VaccineStatus fromWire(String? value) => value == 'pending'
-      ? VaccineStatus.inReview
-      : VaccineStatus.values.firstWhere(
-          (status) =>
-              status != VaccineStatus.unknown && status.wireValue == value,
-          orElse: () => VaccineStatus.unknown,
-        );
+  static VaccineStatus fromWire(String? value) =>
+      VaccineStatus.values.firstWhere(
+        (status) =>
+            status != VaccineStatus.unknown && status.wireValue == value,
+        orElse: () => VaccineStatus.unknown,
+      );
 }
 
 /// Includes FastAPI's states and previously declared client aliases. Alias

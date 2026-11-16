@@ -55,6 +55,7 @@ export function vaccineStatusLabel(status: VaccineStatus): string {
     approved: "Aprobada",
     denied: "Rechazada",
     in_review: "En revisión",
+    pending: "Pendiente",
   }[status];
 }
 
@@ -63,6 +64,7 @@ export function doseStatusLabel(status: DoseStatus): string {
     approved: "Aprobada",
     denied: "Rechazada",
     in_review: "En revisión",
+    pending: "Pendiente",
   }[status];
 }
 
@@ -73,5 +75,6 @@ export function statusVariant(
     approved: "success" as const,
     denied: "destructive" as const,
     in_review: "info" as const,
+    pending: "warning" as const,
   }[status];
 }

@@ -10,8 +10,8 @@ export type Gender = "male" | "female";
 export type AppliesTo = "all" | "male" | "female";
 export type DoseType = "standard" | "booster" | "titer";
 
-export type VaccineStatus = "approved" | "denied" | "in_review";
-export type DoseStatus = "approved" | "denied" | "in_review";
+export type VaccineStatus = "approved" | "denied" | "in_review" | "pending";
+export type DoseStatus = "approved" | "denied" | "in_review" | "pending";
 export type ReportVaccinationStatus = "approved" | "pending" | "denied" | "in_review";
 export type ConversationStatus = "open" | "closed";
 /** Includes FastAPI's authoritative values and legacy client values during migration. */

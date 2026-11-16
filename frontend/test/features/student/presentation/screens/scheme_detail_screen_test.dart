@@ -196,4 +196,58 @@ void main() {
     expect(tester.getSize(title).height, greaterThan(20));
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('date-less vaccine and dose records are shown as pending', (
+    tester,
+  ) async {
+    const dose = DoseModel(
+      id: 'pending-dose',
+      doseNumber: 1,
+      status: DoseStatus.pending,
+      doseConfig: DoseConfigModel(
+        label: 'Primera dosis',
+        isRequired: true,
+        doseType: 'standard',
+        doseNumber: 1,
+      ),
+    );
+    const vaccine = StudentVaccineModel(
+      id: 'pending-vaccine',
+      status: VaccineStatus.pending,
+      vaccine: VaccineInfoModel(
+        name: 'Hepatitis B',
+        code: 'HEP_B',
+        hasTiter: false,
+        hasTiterValue: false,
+        isAnnual: false,
+      ),
+      doses: [dose],
+    );
+    const overview = SchemeOverviewModel(
+      totalVaccines: 1,
+      approvedVaccines: 0,
+      pendingVaccines: 1,
+      deniedVaccines: 0,
+      inReviewVaccines: 0,
+      vaccines: [vaccine],
+    );
+    final notifier = _SchemeNotifier(
+      initialState: const SchemeState(overview: overview, vaccines: [vaccine]),
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [schemeProvider.overrideWith((ref) => notifier)],
+        child: const MaterialApp(home: SchemeDetailScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('En revisión'), findsNothing);
+    expect(find.text('Pendiente'), findsOneWidget);
+    await tester.tap(find.byType(ExpansionTile));
+    await tester.pumpAndSettle();
+    expect(find.text('Pendiente'), findsNWidgets(2));
+    expect(find.byTooltip('Registrar fecha'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }

@@ -266,12 +266,19 @@ def vaccine_status_from_certificate_rules(
     if no_standard_records and titer_doses:
         considered.extend(titer_doses)
 
-    statuses = [dose.status for dose in considered]
+    statuses = [effective_dose_status(dose) for dose in considered]
     if any(status == DoseStatus.DENIED for status in statuses):
         return VaccineStatus.DENIED
     if any(status == DoseStatus.IN_REVIEW for status in statuses):
         return VaccineStatus.IN_REVIEW
     return VaccineStatus.PENDING
+
+
+def effective_dose_status(dose: StudentVaccineDose) -> DoseStatus:
+    """Treat an undated legacy in-review row as pending until a date is recorded."""
+    if dose.status == DoseStatus.IN_REVIEW and dose.applied_date is None:
+        return DoseStatus.PENDING
+    return dose.status
 
 
 def _build_due_info(

@@ -12,9 +12,9 @@ Estado: **DECIDIDO** para las reglas de esta fase. FastAPI es autoridad de domin
 
 ## Estados y revisión
 
-Los estados clínicos oficiales son **EN REVISIÓN**, **APROBADO** y **DENEGADO**. En reportes, EN REVISIÓN puede agruparse/representarse funcionalmente como `PENDING`, pero `PENDING` no es un estado clínico adicional ni un valor nuevo del enum de dominio.
+Los estados de dosis y vacuna son **PENDIENTE**, **EN REVISIÓN**, **APROBADO** y **DENEGADO**. Un registro sin fecha de aplicación permanece PENDIENTE; ingresar una fecha válida lo envía a EN REVISIÓN, y quitar esa fecha lo devuelve a PENDIENTE. Los estados PENDIENTE y EN REVISIÓN son valores distintos y los contadores no se superponen.
 
-El administrador normal realiza la revisión y puede cambiar los estados correspondientes conforme a los permisos existentes. Cuando un estudiante edita una dosis DENEGADA, su estado pasa a EN REVISIÓN; editar nunca la aprueba automáticamente.
+El administrador normal realiza la revisión y puede cambiar los estados correspondientes conforme a los permisos existentes. Cuando un estudiante edita una dosis DENEGADA, con fecha registrada pasa a EN REVISIÓN y sin fecha queda PENDIENTE; editar nunca la aprueba automáticamente.
 
 Cuando el administrador aprueba evidencia asociada a una dosis, evidencia EN REVISIÓN pasa a APROBADA y la dosis asociada pasa a APROBADA dentro de la misma transacción. Si una escritura falla, ambas se revierten. Evidencia DENEGADA no produce una dosis APROBADA. La asociación a dosis es opcional para conservar el flujo general de evidencia.
 

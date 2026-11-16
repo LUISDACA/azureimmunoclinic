@@ -6,7 +6,7 @@ import { useAuthStore } from '@/lib/auth/store';
 import { reviewDose, updateDoseComment } from '@/lib/api/scheme';
 import type { StudentDose } from '@/lib/api/types';
 vi.mock('@/lib/api/scheme', () => ({ reviewDose: vi.fn(), updateDoseComment: vi.fn() }));
-const dose = { id: 'dose1', dose_number: 1, status: 'in_review', admin_notes: 'Synthetic note', dose_config: null } as StudentDose;
+const dose = { id: 'dose1', dose_number: 1, applied_date: '2026-10-01', status: 'in_review', admin_notes: 'Synthetic note', dose_config: null } as StudentDose;
 beforeEach(() => { vi.clearAllMocks(); useAuthStore.setState({ role: 'admin' }); });
 afterEach(cleanup);
 function mount() { render(<QueryClientProvider client={new QueryClient({defaultOptions:{mutations:{retry:false}}})}><AdminDoseRow dose={dose} studentId="student1" /></QueryClientProvider>); }
@@ -34,6 +34,13 @@ it('student cannot mount administrative actions', () => {
   expect(screen.queryByText('Aprobar')).not.toBeInTheDocument();
   expect(screen.queryByText('Denegar')).not.toBeInTheDocument();
   expect(screen.queryByText('Editar comentario')).not.toBeInTheDocument();
+});
+it('keeps an undated dose pending and hides review actions', () => {
+  render(<QueryClientProvider client={new QueryClient()}><AdminDoseRow dose={{...dose, applied_date: null, status:'pending', admin_notes:null}} studentId="student1" /></QueryClientProvider>);
+  expect(screen.getByText('Pendiente')).toBeInTheDocument();
+  expect(screen.queryByText('Aprobar')).not.toBeInTheDocument();
+  expect(screen.queryByText('Denegar')).not.toBeInTheDocument();
+  expect(screen.queryByText('Enviar a revisión')).not.toBeInTheDocument();
 });
 it('retains long dose labels so they can wrap like Flutter', () => {
   const longLabel = 'Etiqueta sintética extensa para verificar que el nombre completo de la dosis se ajuste en pantallas estrechas';

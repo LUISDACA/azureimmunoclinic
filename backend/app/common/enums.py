@@ -22,8 +22,7 @@ class DoseStatus(str, enum.Enum):
     """Review status of an individual vaccine dose."""
 
     IN_REVIEW = "in_review"
-    # Compatibility name only: PENDING is not a separate clinical status.
-    PENDING = "in_review"
+    PENDING = "pending"
     APPROVED = "approved"
     DENIED = "denied"
 
@@ -32,8 +31,7 @@ class VaccineStatus(str, enum.Enum):
     """Aggregated review status of a student's vaccine (recalculated from doses)."""
 
     IN_REVIEW = "in_review"
-    # Compatibility name only: report consumers may call this PENDING.
-    PENDING = "in_review"
+    PENDING = "pending"
     APPROVED = "approved"
     DENIED = "denied"
 

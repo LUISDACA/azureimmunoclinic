@@ -66,16 +66,19 @@ describe("status labels and variants", () => {
     expect(vaccineStatusLabel("approved")).toBe("Aprobada");
     expect(vaccineStatusLabel("denied")).toBe("Rechazada");
     expect(vaccineStatusLabel("in_review")).toBe("En revisión");
+    expect(vaccineStatusLabel("pending")).toBe("Pendiente");
   });
 
   it("labels dose statuses in Spanish", () => {
     expect(doseStatusLabel("approved")).toBe("Aprobada");
     expect(doseStatusLabel("denied")).toBe("Rechazada");
+    expect(doseStatusLabel("pending")).toBe("Pendiente");
   });
 
   it("maps statuses to badge variants", () => {
     expect(statusVariant("approved")).toBe("success");
     expect(statusVariant("denied")).toBe("destructive");
     expect(statusVariant("in_review")).toBe("info");
+    expect(statusVariant("pending")).toBe("warning");
   });
 });

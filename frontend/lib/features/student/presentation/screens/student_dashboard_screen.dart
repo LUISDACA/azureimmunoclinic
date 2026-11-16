@@ -133,7 +133,7 @@ class _StudentDashboardScreenState
               title: 'Bienvenido',
               subtitle: auth.email ?? 'Estudiante',
               icon: Icons.school_outlined,
-              trailing: const UccLogo(size: 76),
+              trailing: const UccLogo(size: 48),
             ),
             const SizedBox(height: 24),
             _buildStatsSection(context, schemeState),
@@ -271,7 +271,7 @@ class _StudentDashboardScreenState
                   ),
                   _StudentStatCard(
                     width: itemWidth,
-                    title: 'En revision',
+                    title: 'En revisión',
                     value: '${overview?.inReviewVaccines ?? 0}',
                     icon: Icons.rate_review_outlined,
                     color: AppColors.statusInReview,

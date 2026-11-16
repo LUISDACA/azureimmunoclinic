@@ -724,7 +724,7 @@ class _State extends ConsumerState<AdminStudentDetailScreen>
       padding: const EdgeInsets.all(12),
       children: _scheme.map((sv) {
         final vaccineName = sv['vaccine']?['name'] ?? 'Vacuna';
-        final status = (sv as Map)['status']?.toString() ?? 'in_review';
+        final status = (sv as Map)['status']?.toString() ?? 'pending';
         final doses = (sv['doses'] as List?) ?? [];
         return Card(
           margin: const EdgeInsets.only(bottom: 8),
@@ -881,29 +881,38 @@ class _State extends ConsumerState<AdminStudentDetailScreen>
           ],
         ],
       ),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (doseStatus != 'approved')
-            IconButton(
-              icon: const Icon(
-                Icons.check_circle,
-                color: AppColors.success,
-                size: 22,
-              ),
-              tooltip: 'Aprobar',
-              onPressed: () =>
-                  _reviewDose(doseId, 'approved', initialNotes: adminNotes),
-            ),
-          if (doseStatus != 'denied')
-            IconButton(
-              icon: const Icon(Icons.cancel, color: AppColors.error, size: 22),
-              tooltip: 'Denegar',
-              onPressed: () =>
-                  _reviewDose(doseId, 'denied', initialNotes: adminNotes),
-            ),
-        ],
-      ),
+      trailing: dose['applied_date'] != null
+          ? Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (doseStatus != 'approved')
+                  IconButton(
+                    icon: const Icon(
+                      Icons.check_circle,
+                      color: AppColors.success,
+                      size: 22,
+                    ),
+                    tooltip: 'Aprobar',
+                    onPressed: () => _reviewDose(
+                      doseId,
+                      'approved',
+                      initialNotes: adminNotes,
+                    ),
+                  ),
+                if (doseStatus != 'denied')
+                  IconButton(
+                    icon: const Icon(
+                      Icons.cancel,
+                      color: AppColors.error,
+                      size: 22,
+                    ),
+                    tooltip: 'Denegar',
+                    onPressed: () =>
+                        _reviewDose(doseId, 'denied', initialNotes: adminNotes),
+                  ),
+              ],
+            )
+          : null,
     );
   }
 

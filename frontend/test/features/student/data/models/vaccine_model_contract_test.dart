@@ -46,6 +46,25 @@ void main() {
     expect(vaccine.toJson()['status'], 'future_state');
   });
 
+  test('keeps pending dose and vaccine states separate from review', () {
+    final dose = DoseModel.fromJson({
+      'id': 'dose-pending',
+      'status': 'pending',
+    });
+    final vaccine = StudentVaccineModel.fromJson({
+      'id': 'assignment-pending',
+      'status': 'pending',
+      'doses': [],
+    });
+
+    expect(dose.status, DoseStatus.pending);
+    expect(dose.toJson()['status'], 'pending');
+    expect(vaccine.status, VaccineStatus.pending);
+    expect(vaccine.toJson()['status'], 'pending');
+    expect(DoseStatus.fromWire('in_review'), DoseStatus.inReview);
+    expect(VaccineStatus.fromWire('in_review'), VaccineStatus.inReview);
+  });
+
   test(
     'parses canonical evidence statuses without assigning review outcomes',
     () {

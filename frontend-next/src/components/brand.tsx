@@ -54,7 +54,7 @@ export function UccHeroPanel({
         aria-hidden
         className="pointer-events-none absolute -right-10 -top-12 h-36 w-36 rounded-full border-[16px] border-white/20"
       />
-      <div className="relative flex items-start gap-4">
+      <div className="relative z-10 flex items-start gap-4">
         {icon && (
           <div className="flex h-13 w-13 shrink-0 items-center justify-center rounded-xl border border-white/25 bg-white/15 p-3">
             {icon}
@@ -71,7 +71,11 @@ export function UccHeroPanel({
             </p>
           )}
         </div>
-        {trailing && <div className="shrink-0">{trailing}</div>}
+        {trailing && (
+          <div className="relative z-10 flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-white/90 p-1 shadow-sm">
+            {trailing}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -40,7 +40,7 @@ it('shows all five backend counters, including zero denied, without recounting v
   vi.mocked(getMyScheme).mockResolvedValue(fixture.data); mount();
   const region = await screen.findByRole('region', { name: 'Estadísticas de vacunas' });
   await waitFor(() => expect(within(region).getByText('Total').parentElement).toHaveTextContent('10'));
-  for (const [label, count] of [['Total', 10], ['Aprobadas', 5], ['Pendientes', 3], ['Denegadas', 0], ['En revisión', 2]] as const) {
+  for (const [label, count] of [['Total', 10], ['Aprobadas', 5], ['Pendientes', 5], ['Denegadas', 0], ['En revisión', 0]] as const) {
     expect(within(region).getByText(label).parentElement).toHaveTextContent(String(count));
   }
 });

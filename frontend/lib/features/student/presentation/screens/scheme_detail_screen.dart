@@ -45,6 +45,8 @@ class _SchemeDetailScreenState extends ConsumerState<SchemeDetailScreen> {
         return 'Denegada';
       case 'in_review':
         return 'En Revisión';
+      case 'pending':
+        return 'Pendiente';
       default:
         return 'Estado no reconocido';
     }
@@ -590,7 +592,9 @@ class _SchemeDetailScreenState extends ConsumerState<SchemeDetailScreen> {
 
   bool _canEditDoseDate(DoseStatus status, bool isOffline) {
     if (isOffline) return false;
-    return status == DoseStatus.denied || status == DoseStatus.inReview;
+    return status == DoseStatus.pending ||
+        status == DoseStatus.denied ||
+        status == DoseStatus.inReview;
   }
 
   Widget _buildDoseActions(

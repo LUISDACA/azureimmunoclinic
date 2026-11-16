@@ -185,6 +185,50 @@ it('keeps student accordions initially closed with keyboard access and no admini
   expectNoClinicalWrites();
 });
 
+it('shows date-less vaccine records as pending and allows a student to register the date', async () => {
+  const user = userEvent.setup();
+  const dose: StudentDose = {
+    id: 'pending-dose',
+    dose_number: 1,
+    applied_date: null,
+    due_date: null,
+    days_until_due: null,
+    is_overdue: null,
+    is_due_today: null,
+    titer_value: null,
+    status: 'pending',
+    admin_notes: null,
+    reviewed_by: null,
+    reviewed_at: null,
+    dose_config: null,
+  };
+  const vaccine: StudentVaccine = {
+    ...vaccines[0],
+    status: 'pending',
+    doses: [dose],
+  };
+  vi.mocked(getMyScheme).mockResolvedValue({
+    ...overview,
+    pending_vaccines: 1,
+    in_review_vaccines: 0,
+    vaccines: [vaccine],
+  });
+  useAuthStore.setState({ role: 'student' });
+  render(
+    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+      <StudentScheme />
+    </QueryClientProvider>,
+  );
+
+  const trigger = await screen.findByRole('button', { name: /^Vacuna A/ });
+  expect(within(trigger).getByText('Pendiente')).toBeVisible();
+  expect(screen.getByText('En revisión').parentElement).toHaveTextContent('0');
+  await user.click(trigger);
+  expect((await screen.findAllByText('Pendiente')).length).toBe(2);
+  expect(screen.getByRole('button', { name: 'Registrar' })).toBeVisible();
+  expectNoClinicalWrites();
+});
+
 it('retains the complete vaccine name in the student scheme accordion', async () => {
   const longName = 'Vacuna sintética de prueba '.repeat(8).trim();
   const longVaccine: StudentVaccine = {

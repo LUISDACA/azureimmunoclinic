@@ -132,6 +132,8 @@ async def test_login_scheme_evidence_review_certificate(
     scheme = await client.get("/api/v1/scheme/", headers=student)
     assert scheme.status_code == 200
     dose_id = scheme.json()["vaccines"][0]["doses"][0]["id"]
+    assert scheme.json()["in_review_vaccines"] == 0
+    assert scheme.json()["pending_vaccines"] == scheme.json()["total_vaccines"]
     other_dose_id = str(uuid.uuid4())
     rejected = await client.get("/api/v1/certificates/scheme", headers=student)
     assert rejected.status_code == 400
@@ -143,6 +145,11 @@ async def test_login_scheme_evidence_review_certificate(
             json={"applied_date": clinical_today().isoformat()},
         )
     ).status_code == 200
+    submitted_scheme = (await client.get("/api/v1/scheme/", headers=student)).json()
+    assert submitted_scheme["in_review_vaccines"] == 1
+    assert submitted_scheme["pending_vaccines"] == submitted_scheme["total_vaccines"] - 1
+    assert submitted_scheme["vaccines"][0]["status"] == "in_review"
+    assert submitted_scheme["vaccines"][0]["doses"][0]["status"] == "in_review"
     pdf = io.BytesIO()
     canvas = Canvas(pdf)
     canvas.drawString(50, 700, "Synthetic evidence only")
