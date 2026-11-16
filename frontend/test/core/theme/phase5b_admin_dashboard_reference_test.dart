@@ -15,6 +15,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:google_fonts/src/google_fonts_base.dart' as font_test;
 import 'package:immuno_clinic_app/core/theme/app_theme.dart';
 import 'package:immuno_clinic_app/core/theme/theme_mode_provider.dart';
+import 'package:immuno_clinic_app/core/widgets/ucc_brand.dart';
 import 'package:immuno_clinic_app/features/admin/data/models/admin_models.dart';
 import 'package:immuno_clinic_app/features/admin/presentation/providers/admin_provider.dart';
 import 'package:immuno_clinic_app/features/admin/presentation/screens/admin_dashboard_screen.dart';
@@ -135,6 +136,16 @@ Future<(GlobalKey, GoRouter)> _mount(
       ),
     ),
   );
+  final logo = find.byType(UccLogo);
+  if (logo.evaluate().isNotEmpty) {
+    await tester.runAsync(
+      () => precacheImage(
+        const AssetImage(UccLogo.assetPath),
+        tester.element(logo.first),
+      ),
+    );
+    await tester.pump();
+  }
   await tester.pump(const Duration(milliseconds: 500));
   await tester.pump(const Duration(milliseconds: 500));
   return (boundary, router);
@@ -192,7 +203,7 @@ void main() {
       ),
     };
     final material = await rootBundle.load('fonts/MaterialIcons-Regular.otf');
-    font_test.assetManifest = _LocalFonts(fonts);
+    font_test.assetManifest = _LocalFonts(assets);
     GoogleFonts.config.allowRuntimeFetching = false;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMessageHandler(

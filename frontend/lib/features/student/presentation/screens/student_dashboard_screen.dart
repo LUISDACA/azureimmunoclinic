@@ -133,7 +133,7 @@ class _StudentDashboardScreenState
               title: 'Bienvenido',
               subtitle: auth.email ?? 'Estudiante',
               icon: Icons.school_outlined,
-              trailing: const UccLogo(size: 48),
+              trailing: const UccLogo(size: 56),
             ),
             const SizedBox(height: 24),
             _buildStatsSection(context, schemeState),

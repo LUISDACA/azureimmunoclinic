@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../firebase_options.dart';
 import '../network/api_client.dart';
 import '../session/session_manager.dart';
+import 'notification_tap_coordinator.dart';
 import 'package:dio/dio.dart';
 
 @pragma('vm:entry-point')
@@ -71,7 +72,12 @@ class PushNotificationService {
       iOS: iosSettings,
     );
 
-    await _localNotifications.initialize(settings: initSettings);
+    await _localNotifications.initialize(
+      settings: initSettings,
+      onDidReceiveNotificationResponse: (_) {
+        NotificationTapCoordinator.instance.requestOpen();
+      },
+    );
 
     if (defaultTargetPlatform == TargetPlatform.android) {
       await _localNotifications
@@ -82,6 +88,18 @@ class PushNotificationService {
     }
 
     FirebaseMessaging.onMessage.listen(_showForegroundNotification);
+    FirebaseMessaging.onMessageOpenedApp.listen((_) {
+      NotificationTapCoordinator.instance.requestOpen();
+    });
+
+    final localLaunch = await _localNotifications
+        .getNotificationAppLaunchDetails();
+    if (localLaunch?.didNotificationLaunchApp ?? false) {
+      NotificationTapCoordinator.instance.requestOpen();
+    }
+    if (await FirebaseMessaging.instance.getInitialMessage() != null) {
+      NotificationTapCoordinator.instance.requestOpen();
+    }
   }
 
   Future<void> registerDevice() async {

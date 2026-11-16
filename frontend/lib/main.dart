@@ -6,9 +6,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'core/notifications/push_notification_service.dart';
+import 'core/notifications/notification_tap_coordinator.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_mode_provider.dart';
+import 'core/utils/role_utils.dart';
 import 'features/auth/presentation/providers/auth_provider.dart';
 
 Future<void> main() async {
@@ -31,6 +33,17 @@ class ImmunoClinicApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
     final themeMode = ref.watch(themeModeProvider);
+    final notificationTaps = NotificationTapCoordinator.instance;
+    notificationTaps.setHandler(() {
+      final auth = ref.read(authStateProvider);
+      if (!auth.isAuthenticated || auth.mustChangePassword) return false;
+      router.go(
+        isAdminRole(auth.role)
+            ? '/admin/notifications'
+            : '/student/notifications',
+      );
+      return true;
+    });
     ref.listen<AuthState>(authStateProvider, (previous, next) {
       final pushService = ref.read(pushNotificationServiceProvider);
       if (next.isAuthenticated &&
@@ -41,6 +54,7 @@ class ImmunoClinicApp extends ConsumerWidget {
       if (!next.isAuthenticated && previous?.isAuthenticated == true) {
         unawaited(pushService.clearLocal());
       }
+      notificationTaps.retry();
     });
 
     return MaterialApp.router(

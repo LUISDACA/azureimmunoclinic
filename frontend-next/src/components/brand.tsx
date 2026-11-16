@@ -13,7 +13,7 @@ export function UccLogo({
       src="/brand/ucc_logo_app.png"
       alt="Universidad Cooperativa de Colombia"
       width={size}
-      height={Math.round(size * 0.74)}
+      height={size}
       priority
       className={cn("object-contain", className)}
     />
@@ -50,11 +50,7 @@ export function UccHeroPanel({
 }) {
   return (
     <div className="ucc-brand-gradient relative overflow-hidden rounded-xl p-5 text-white shadow-lg">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -right-10 -top-12 h-36 w-36 rounded-full border-[16px] border-white/20"
-      />
-      <div className="relative z-10 flex items-start gap-4">
+      <div className="relative flex items-start gap-4">
         {icon && (
           <div className="flex h-13 w-13 shrink-0 items-center justify-center rounded-xl border border-white/25 bg-white/15 p-3">
             {icon}
@@ -72,8 +68,8 @@ export function UccHeroPanel({
           )}
         </div>
         {trailing && (
-          <div className="relative z-10 flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-white/90 p-1 shadow-sm">
-            {trailing}
+          <div className="flex h-[72px] w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-[18px] border border-white/70 bg-[#eff9f3] shadow-sm">
+            <div className="scale-[1.2]">{trailing}</div>
           </div>
         )}
       </div>
