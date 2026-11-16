@@ -83,15 +83,24 @@ class _CommunicationsScreenState extends ConsumerState<CommunicationsScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 24,
+          ),
           title: Text(
             isAppAdmin
                 ? 'Mensaje a administrador'
                 : isAdmin
                 ? 'Mensaje a estudiante'
                 : 'Nueva consulta al administrador',
+            maxLines: 2,
+            softWrap: true,
+            overflow: TextOverflow.ellipsis,
           ),
           content: SizedBox(
-            width: 460,
+            width: (MediaQuery.sizeOf(ctx).width - 96)
+                .clamp(0.0, 460.0)
+                .toDouble(),
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -114,6 +123,7 @@ class _CommunicationsScreenState extends ConsumerState<CommunicationsScreen> {
                       widget.initialStudentId == null) ...[
                     DropdownButtonFormField<String>(
                       initialValue: target,
+                      isExpanded: true,
                       decoration: const InputDecoration(
                         labelText: 'Destinatario',
                       ),
@@ -155,6 +165,7 @@ class _CommunicationsScreenState extends ConsumerState<CommunicationsScreen> {
                   ],
                   DropdownButtonFormField<String>(
                     initialValue: category,
+                    isExpanded: true,
                     decoration: const InputDecoration(labelText: 'Categoría'),
                     items: const [
                       DropdownMenuItem(

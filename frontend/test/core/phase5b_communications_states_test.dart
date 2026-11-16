@@ -342,6 +342,27 @@ void main() {
     },
   );
 
+  testWidgets('create message dialog fits a 360px phone viewport', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(720, 1600);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final remote = _Remote();
+    await _mount(tester, remote, detail: false, role: 'admin');
+    remote.lists.single.complete([]);
+    await _paint(tester);
+
+    await tester.tap(find.text('Nuevo'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Mensaje a estudiante'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
   testWidgets(
     'shortening a recipient query clears loading and ignores the late response',
     (tester) async {
