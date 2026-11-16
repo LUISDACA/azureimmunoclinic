@@ -182,9 +182,14 @@ class UccHeroPanel extends StatelessWidget {
       child: Stack(
         children: [
           const Positioned(
-            right: -34,
-            top: -40,
-            child: _SoftBrandRing(size: 140, opacity: 0.18, onDark: true),
+            right: -6,
+            top: -16,
+            child: _SoftBrandRing(
+              size: 88,
+              opacity: 0.18,
+              onDark: true,
+              fullCircle: true,
+            ),
           ),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -231,26 +236,7 @@ class UccHeroPanel extends StatelessWidget {
                   ],
                 ),
               ),
-              if (trailing != null) ...[
-                const SizedBox(width: 12),
-                Container(
-                  width: 56,
-                  height: 56,
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.92),
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.12),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Center(child: trailing!),
-                ),
-              ],
+              if (trailing != null) ...[const SizedBox(width: 12), trailing!],
             ],
           ),
         ],
@@ -296,11 +282,13 @@ class _SoftBrandRing extends StatelessWidget {
   final double size;
   final double opacity;
   final bool onDark;
+  final bool fullCircle;
 
   const _SoftBrandRing({
     required this.size,
     required this.opacity,
     this.onDark = false,
+    this.fullCircle = false,
   });
 
   @override
@@ -309,7 +297,11 @@ class _SoftBrandRing extends StatelessWidget {
       child: RepaintBoundary(
         child: CustomPaint(
           size: Size.square(size),
-          painter: _RingPainter(opacity: opacity, onDark: onDark),
+          painter: _RingPainter(
+            opacity: opacity,
+            onDark: onDark,
+            fullCircle: fullCircle,
+          ),
         ),
       ),
     );
@@ -319,8 +311,13 @@ class _SoftBrandRing extends StatelessWidget {
 class _RingPainter extends CustomPainter {
   final double opacity;
   final bool onDark;
+  final bool fullCircle;
 
-  const _RingPainter({required this.opacity, required this.onDark});
+  const _RingPainter({
+    required this.opacity,
+    required this.onDark,
+    required this.fullCircle,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -334,18 +331,24 @@ class _RingPainter extends CustomPainter {
         alpha: opacity,
       );
 
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius),
-      -math.pi / 2,
-      math.pi * 1.55,
-      false,
-      paint,
-    );
+    if (fullCircle) {
+      canvas.drawCircle(center, radius, paint);
+    } else {
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius),
+        -math.pi / 2,
+        math.pi * 1.55,
+        false,
+        paint,
+      );
+    }
   }
 
   @override
   bool shouldRepaint(covariant _RingPainter oldDelegate) {
-    return oldDelegate.opacity != opacity || oldDelegate.onDark != onDark;
+    return oldDelegate.opacity != opacity ||
+        oldDelegate.onDark != onDark ||
+        oldDelegate.fullCircle != fullCircle;
   }
 }
 

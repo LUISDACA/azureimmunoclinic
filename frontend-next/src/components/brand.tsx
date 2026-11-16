@@ -52,7 +52,7 @@ export function UccHeroPanel({
     <div className="ucc-brand-gradient relative overflow-hidden rounded-xl p-5 text-white shadow-lg">
       <div
         aria-hidden
-        className="pointer-events-none absolute -right-10 -top-12 h-36 w-36 rounded-full border-[16px] border-white/20"
+        className="pointer-events-none absolute right-[14px] top-1 h-[88px] w-[88px] rounded-full border-[8px] border-white/20"
       />
       <div className="relative z-10 flex items-start gap-4">
         {icon && (
@@ -71,11 +71,7 @@ export function UccHeroPanel({
             </p>
           )}
         </div>
-        {trailing && (
-          <div className="relative z-10 flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-white/90 p-1 shadow-sm">
-            {trailing}
-          </div>
-        )}
+        {trailing && <div className="shrink-0">{trailing}</div>}
       </div>
     </div>
   );
