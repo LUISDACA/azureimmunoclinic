@@ -37,6 +37,16 @@ class UccLogo extends StatelessWidget {
         cacheHeight: (height * pixelRatio).round(),
         fit: BoxFit.contain,
         filterQuality: FilterQuality.medium,
+        frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+          if (frame == null) {
+            return _FallbackUccLogo(
+              size: size,
+              showWordmark: showWordmark,
+              wordmarkColor: resolvedWordmarkColor,
+            );
+          }
+          return child;
+        },
         errorBuilder: (context, error, stackTrace) => _FallbackUccLogo(
           size: size,
           showWordmark: showWordmark,

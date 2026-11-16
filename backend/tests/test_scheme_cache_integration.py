@@ -11,6 +11,7 @@ real production code path of ``SchemeService`` and ``EvidenceService``.
 
 from __future__ import annotations
 
+from datetime import date
 import uuid
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
@@ -96,6 +97,7 @@ async def test_review_dose_invalidates_student_scheme_cache():
         student_user_id=student_user_id,
         dose_id=dose_id,
     )
+    dose.applied_date = date.today()
 
     scheme_repo = MagicMock()
     scheme_repo.get_dose_by_id = AsyncMock(return_value=dose)
@@ -138,6 +140,7 @@ async def test_review_dose_without_commit_keeps_cache():
         student_user_id=student_user_id,
         dose_id=dose_id,
     )
+    dose.applied_date = date.today()
 
     scheme_repo = MagicMock()
     scheme_repo.get_dose_by_id = AsyncMock(return_value=dose)

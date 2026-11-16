@@ -125,11 +125,12 @@ void main() {
       (_) async => [
         {
           'vaccine': {'name': 'Vacuna ejemplo'},
-          'status': 'pending',
+          'status': 'in_review',
           'doses': [
             {
               'id': 'dose-1',
-              'status': 'pending',
+              'status': 'in_review',
+              'applied_date': '2026-11-15',
               'dose_number': 1,
               'dose_config': {'label': 'Dosis 1'},
             },

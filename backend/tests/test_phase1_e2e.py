@@ -178,7 +178,6 @@ async def test_login_scheme_evidence_review_certificate(
             json={"status": "approved"},
         )
     ).status_code == 403
-    scheme_status_before_evidence_decision = await client.get("/api/v1/scheme/", headers=student)
     evidence_decision = await client.patch(
         evidence_review_path,
         headers=admin,
@@ -189,9 +188,7 @@ async def test_login_scheme_evidence_review_certificate(
     assert evidence_decision.json()["reviewed_by"]
     updated_scheme = (await client.get("/api/v1/scheme/", headers=student)).json()
     assert updated_scheme["vaccines"][0]["doses"][0]["status"] == "approved"
-    assert (await client.get("/api/v1/scheme/", headers=student)).json()["vaccines"][0][
-        "status"
-    ] == scheme_status_before_evidence_decision.json()["vaccines"][0]["status"]
+    assert updated_scheme["vaccines"][0]["status"] == "approved"
     file_id = upload.json()["files"][0]["id"]
     path = f"/api/v1/evidence/files/{file_id}"
     assert (await client.get(path, headers=student)).content == pdf.getvalue()

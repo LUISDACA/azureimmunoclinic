@@ -7,7 +7,7 @@ from app.modules.audit.models import AuditLog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from tests.test_phase1_e2e import catalog, login
+from tests.test_phase1_e2e import catalog, clinical_today, login
 
 
 @pytest.mark.asyncio
@@ -44,6 +44,13 @@ async def test_comment_never_reviews_dose(
         )
     ).status_code == 422
     assert (await client.patch(path + "/comment", headers=admin, json={})).status_code == 422
+    assert (
+        await client.put(
+            f"/api/v1/scheme/doses/{initial['id']}",
+            headers=student,
+            json={"applied_date": clinical_today().isoformat()},
+        )
+    ).status_code == 200
     for state in ("in_review", "approved", "denied"):
         result = await client.put(path + "/review", headers=admin, json={"status": state})
         assert result.status_code == 200

@@ -354,7 +354,7 @@ void main() {
           'Aprobadas',
           'Pendientes',
           'Denegadas',
-          'En revision',
+          'En revisión',
         ]) {
           final paragraph =
               tester.element(find.text(label)).findRenderObject()!
