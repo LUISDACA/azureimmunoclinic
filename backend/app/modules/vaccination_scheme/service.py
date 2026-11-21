@@ -454,10 +454,10 @@ class SchemeService:
         """
         Recalculate vaccine aggregate status from its individual doses.
 
-        Rules (validated from v1):
-        - All required doses approved → vaccine approved
+        Rules (evaluated in priority order by the shared domain helper):
         - Any dose denied → vaccine denied
         - Any dated dose in_review and none denied → vaccine in_review
+        - Complete requirements, or incomplete but still current → approved
         - Otherwise → vaccine pending
         """
         return vaccine_status_from_certificate_rules(doses)

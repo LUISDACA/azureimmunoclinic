@@ -178,6 +178,37 @@ class VaccinationRulesTests(unittest.TestCase):
         self.assertFalse(result.is_complete)
         self.assertTrue(result.is_certifiable)
 
+    def test_aggregate_vaccine_status_stays_approved_through_next_dose_due_date(self) -> None:
+        configs = [
+            _dose_config(dose_number=1, label="Primera dosis"),
+            _dose_config(dose_number=2, label="Segunda dosis"),
+        ]
+        vaccine = _student_vaccine(
+            doses=[
+                _dose(
+                    dose_number=1,
+                    config=configs[0],
+                    status=DoseStatus.APPROVED,
+                    applied_date=date(2026, 9, 1),
+                ),
+                _dose(dose_number=2, config=configs[1]),
+            ]
+        )
+
+        self.assertFalse(certificate_vaccine_complete(vaccine, today=date(2026, 9, 30)))
+        self.assertEqual(
+            vaccine_status_from_certificate_rules(vaccine.doses, today=date(2026, 9, 30)),
+            VaccineStatus.APPROVED,
+        )
+        self.assertEqual(
+            vaccine_status_from_certificate_rules(vaccine.doses, today=date(2026, 10, 1)),
+            VaccineStatus.APPROVED,
+        )
+        self.assertEqual(
+            vaccine_status_from_certificate_rules(vaccine.doses, today=date(2026, 10, 2)),
+            VaccineStatus.PENDING,
+        )
+
     def test_corresponding_unapproved_or_overdue_dose_blocks_up_to_date(self) -> None:
         configs = [
             _dose_config(dose_number=1, label="Primera dosis"),
@@ -404,6 +435,23 @@ class VaccinationRulesTests(unittest.TestCase):
         self.assertEqual(
             vaccine_status_from_certificate_rules(student_vaccine.doses),
             VaccineStatus.APPROVED,
+        )
+
+    def test_pending_titer_without_standard_doses_stays_pending(self) -> None:
+        titer = _dose_config(
+            dose_number=5,
+            label="Titulacion",
+            is_required=False,
+            dose_type=DoseType.TITER,
+        )
+        student_vaccine = _student_vaccine(
+            doses=[_dose(dose_number=5, config=titer, status=DoseStatus.PENDING)],
+        )
+
+        self.assertFalse(certificate_vaccine_complete(student_vaccine))
+        self.assertEqual(
+            vaccine_status_from_certificate_rules(student_vaccine.doses),
+            VaccineStatus.PENDING,
         )
 
     def test_approved_titer_dominates_even_when_standard_doses_were_applied(self) -> None:

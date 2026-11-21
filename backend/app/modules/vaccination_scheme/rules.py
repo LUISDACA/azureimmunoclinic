@@ -207,10 +207,11 @@ def _vaccine_up_to_date(student_vaccine: StudentVaccine, today: date) -> bool:
     for dose in required:
         due_date = due_dates.get(dose.id)
         # The first requirement applies immediately. Later requirements apply
-        # only after their configured sequence has produced a due date.
+        # only after their configured sequence has produced a due date. A dose
+        # remains current through its due date and becomes overdue the next day.
         corresponds = dose.dose_number == 1 or dose.applied_date is not None
         if due_date is not None:
-            corresponds = due_date <= today or dose.applied_date is not None
+            corresponds = due_date < today or dose.applied_date is not None
         if corresponds and dose.status != DoseStatus.APPROVED:
             return False
     return True
@@ -247,13 +248,22 @@ def certificate_overdue_doses(
 
 def vaccine_status_from_certificate_rules(
     doses: list[StudentVaccineDose],
+    *,
+    today: date | None = None,
 ) -> VaccineStatus:
-    """Calculate vaccine status, allowing approved titer as a valid alternative."""
+    """Return current vaccine status, allowing an approved titer as an alternative.
+
+    A future scheduled dose does not make an otherwise current vaccine pending.
+    Once the due date has passed, the unapproved dose makes the vaccine pending.
+    """
     if not doses:
         return VaccineStatus.PENDING
 
     student_vaccine = doses[0].student_vaccine
-    if student_vaccine is not None and certificate_vaccine_complete(student_vaccine):
+    evaluation_date = today or clinical_today()
+    if student_vaccine is not None and certificate_vaccine_complete(
+        student_vaccine, today=evaluation_date
+    ):
         return VaccineStatus.APPROVED
 
     standard_required = _required_standard_doses(doses)
@@ -271,6 +281,12 @@ def vaccine_status_from_certificate_rules(
         return VaccineStatus.DENIED
     if any(status == DoseStatus.IN_REVIEW for status in statuses):
         return VaccineStatus.IN_REVIEW
+    if (
+        student_vaccine is not None
+        and certificate_initial_dose_complete(student_vaccine)
+        and _vaccine_up_to_date(student_vaccine, evaluation_date)
+    ):
+        return VaccineStatus.APPROVED
     return VaccineStatus.PENDING
 
 
