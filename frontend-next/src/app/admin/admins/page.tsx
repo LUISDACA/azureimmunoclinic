@@ -159,7 +159,7 @@ export default function AdminManagementPage() {
 
       {error && confirmedMessage && <p role="status">{confirmedMessage}</p>}
       {writeError && <p role="status">{writeError}</p>}
-      {signerAssignments.error && (
+      {readable && signerAssignments.error && (
         <QueryError
           error={signerAssignments.error}
           retry={() => signerAssignments.refetch({ cancelRefetch: false })}
