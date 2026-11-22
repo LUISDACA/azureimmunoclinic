@@ -27,13 +27,16 @@ class _State extends ConsumerState<AdminManagementScreen> {
   bool _loading = true;
   bool _saving = false;
   bool _deleting = false;
+  bool _assigningSigner = false;
   bool _hasLoaded = false;
   String? _readError;
   String? _writeError;
+  String? _signerError;
   String? _confirmedChange;
   Future<void>? _inFlightLoad;
-  bool get _busy => _loading || _saving || _deleting;
+  bool get _busy => _loading || _saving || _deleting || _assigningSigner;
   List<dynamic> _admins = [];
+  List<dynamic> _signerAssignments = [];
 
   @override
   void initState() {
@@ -66,10 +69,23 @@ class _State extends ConsumerState<AdminManagementScreen> {
   Future<void> _performLoad() async {
     setState(() => _loading = true);
     try {
+      var signerLoadFailed = false;
+      final signerAssignmentsFuture = ref
+          .read(adminRemoteDataSourceProvider)
+          .listCertificateSignerAssignments()
+          .catchError((Object _) {
+            signerLoadFailed = true;
+            return <dynamic>[];
+          });
       final admins = await ref.read(adminRemoteDataSourceProvider).listAdmins();
+      final signerAssignments = await signerAssignmentsFuture;
       if (!mounted) return;
       setState(() {
         _admins = admins;
+        _signerAssignments = signerAssignments;
+        _signerError = signerLoadFailed
+            ? 'No se pudo cargar quién firma los certificados. Actualiza la lista para reintentar.'
+            : null;
         _hasLoaded = true;
         _readError = null;
         _confirmedChange = null;
@@ -91,6 +107,109 @@ class _State extends ConsumerState<AdminManagementScreen> {
         };
         _loading = false;
       });
+    }
+  }
+
+  Map<String, dynamic>? _currentSignerFor(String program, String campus) {
+    for (final item in _signerAssignments) {
+      final assignment = Map<String, dynamic>.from(item as Map);
+      if (assignment['active'] == true &&
+          assignment['program'] == program &&
+          assignment['campus'] == campus) {
+        return assignment;
+      }
+    }
+    return null;
+  }
+
+  Future<void> _assignCertificateSigner({
+    required String adminId,
+    required String adminName,
+    required String program,
+    required String campus,
+  }) async {
+    if (_busy ||
+        _readError != null ||
+        _signerError != null ||
+        adminId.isEmpty ||
+        program.isEmpty ||
+        campus.isEmpty) {
+      return;
+    }
+
+    final current = _currentSignerFor(program, campus);
+    final replacing =
+        current != null && current['admin_id']?.toString() != adminId;
+    setState(() {
+      _assigningSigner = true;
+      _writeError = null;
+      _confirmedChange = null;
+    });
+
+    try {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Responsable de certificados'),
+          content: Text(
+            replacing
+                ? 'Ya hay un responsable para $program · $campus. ¿Quieres reemplazarlo y designar a $adminName?'
+                : '¿Designar a $adminName para firmar los certificados de $program · $campus?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Designar responsable'),
+            ),
+          ],
+        ),
+      );
+      if (!mounted || confirmed != true) return;
+
+      final assignment = await ref
+          .read(adminRemoteDataSourceProvider)
+          .assignCertificateSigner(
+            program: program,
+            campus: campus,
+            adminId: adminId,
+          );
+      if (!mounted) return;
+
+      final updated = <Map<String, dynamic>>[];
+      for (final item in _signerAssignments) {
+        final row = Map<String, dynamic>.from(item as Map);
+        if (row['active'] == true &&
+            row['program'] == program &&
+            row['campus'] == campus) {
+          updated.add({...row, 'active': false});
+        } else {
+          updated.add(row);
+        }
+      }
+      updated.removeWhere((row) => row['id'] == assignment['id']);
+      updated.add(assignment);
+      setState(() => _signerAssignments = updated);
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              '$adminName es ahora responsable de certificados para $program · $campus.',
+            ),
+          ),
+        );
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => _writeError = 'No se pudo asignar al responsable de certificados.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _assigningSigner = false);
     }
   }
 
@@ -514,6 +633,25 @@ class _State extends ConsumerState<AdminManagementScreen> {
                       fontWeight: FontWeight.w700,
                     ),
                   ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'El responsable firma los certificados de estudiantes de su programa y sede.',
+                  ),
+                  if (_signerError != null) ...[
+                    const SizedBox(height: 8),
+                    Semantics(
+                      liveRegion: true,
+                      child: Row(
+                        children: [
+                          Expanded(child: Text(_signerError!)),
+                          TextButton(
+                            onPressed: _busy ? null : () => _load(),
+                            child: const Text('Reintentar'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 8),
                   if (_admins.isEmpty)
                     const Center(child: Text('No hay administradores creados'))
@@ -527,6 +665,10 @@ class _State extends ConsumerState<AdminManagementScreen> {
                       final program = profile?['program']?.toString() ?? '';
                       final campus = profile?['campus']?.toString() ?? '';
                       final jobTitle = profile?['job_title']?.toString() ?? '';
+                      final currentSigner = _currentSignerFor(program, campus);
+                      final isSigner = currentSigner?['admin_id']?.toString() ==
+                          adminId;
+                      final isActive = admin['is_active'] != false;
                       final scope = [
                         if (jobTitle.isNotEmpty) jobTitle,
                         if (program.isNotEmpty) program,
@@ -557,6 +699,35 @@ class _State extends ConsumerState<AdminManagementScreen> {
                           trailing: Wrap(
                             spacing: 4,
                             children: [
+                              if (isSigner)
+                                const Tooltip(
+                                  message: 'Responsable de certificados',
+                                  child: Padding(
+                                    padding: EdgeInsets.all(8),
+                                    child: Icon(
+                                      Icons.verified_user,
+                                      color: AppColors.success,
+                                    ),
+                                  ),
+                                )
+                              else
+                                IconButton(
+                                  icon: const Icon(Icons.verified_user_outlined),
+                                  tooltip: 'Hacer responsable de certificados',
+                                  onPressed: _busy ||
+                                          _signerError != null ||
+                                          !isActive ||
+                                          program.isEmpty ||
+                                          campus.isEmpty ||
+                                          adminId.isEmpty
+                                      ? null
+                                      : () => _assignCertificateSigner(
+                                          adminId: adminId,
+                                          adminName: name,
+                                          program: program,
+                                          campus: campus,
+                                        ),
+                                ),
                               IconButton(
                                 icon: const Icon(Icons.forum_outlined),
                                 tooltip: 'Enviar mensaje',
