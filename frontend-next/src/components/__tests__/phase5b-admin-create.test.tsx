@@ -4,13 +4,13 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { toast } from 'sonner';
 import Admins from '@/app/admin/admins/page';
-import { createAdmin, deleteAdmin, getAcademicOptions, listAdmins } from '@/lib/api/admin';
+import { assignCertificateSigner, createAdmin, deleteAdmin, getAcademicOptions, listAdmins, listCertificateSignerAssignments } from '@/lib/api/admin';
 import { useAuthStore } from '@/lib/auth/store';
 import type { User } from '@/lib/api/types';
 
 const navigation = vi.hoisted(() => ({ push: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => navigation }));
-vi.mock('@/lib/api/admin', () => ({ createAdmin: vi.fn(), deleteAdmin: vi.fn(), getAcademicOptions: vi.fn(), listAdmins: vi.fn() }));
+vi.mock('@/lib/api/admin', () => ({ assignCertificateSigner: vi.fn(), createAdmin: vi.fn(), deleteAdmin: vi.fn(), getAcademicOptions: vi.fn(), listAdmins: vi.fn(), listCertificateSignerAssignments: vi.fn() }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), warning: vi.fn(), error: vi.fn() } }));
 const clients: QueryClient[] = [];
 const existing = { id: 'synthetic-admin', email: 'admin@example.invalid', role: 'admin', is_active: true, profile: null } as User;
@@ -37,6 +37,8 @@ beforeEach(() => {
   vi.resetAllMocks();
   useAuthStore.setState({ userId: 'synthetic-app-admin', role: 'app_admin', isAuthenticated: true });
   vi.mocked(listAdmins).mockResolvedValue([existing]);
+  vi.mocked(listCertificateSignerAssignments).mockResolvedValue([]);
+  vi.mocked(assignCertificateSigner).mockImplementation(async payload => ({ ...payload, id: 'synthetic-assignment', assigned_by_id: 'synthetic-app-admin', active: true, created_at: '2026-11-21T12:00:00Z' }));
   vi.mocked(getAcademicOptions).mockResolvedValue({ programs: ['Medicina', 'Enfermería'], campuses: ['Bogotá', 'Cali'], semesters: Array.from({ length: 10 }, (_, i) => i + 1) });
   vi.mocked(createAdmin).mockResolvedValue({ ...existing, id: 'created', email: 'new-admin@example.invalid', email_delivery_status: 'accepted' });
 });

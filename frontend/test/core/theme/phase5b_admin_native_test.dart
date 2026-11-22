@@ -29,6 +29,7 @@ class _Dio extends Mock implements Dio {}
 const _row = {
   'id': 'synthetic-admin',
   'email': 'admin@example.com',
+  'is_active': true,
   'profile': {
     'first_name': 'Synthetic',
     'last_name': 'Admin',
@@ -44,6 +45,8 @@ class _Api implements ApiClient {
       creates = <Completer<Response<dynamic>>>[],
       removes = <Completer<Response<dynamic>>>[];
   final payloads = <Map<String, dynamic>>[];
+  final signerPayloads = <Map<String, dynamic>>[];
+  List<dynamic> assignments = [];
   _Api() {
     when(() => dio.get<dynamic>('/admin/academic-options')).thenAnswer(
       (_) async => Response(
@@ -58,6 +61,49 @@ class _Api implements ApiClient {
       final c = Completer<Response<dynamic>>();
       reads.add(c);
       return c.future;
+    });
+    when(
+      () => dio.get<dynamic>('/admin/certificate-signer-assignments'),
+    ).thenAnswer(
+      (_) async => Response(
+        requestOptions: RequestOptions(
+          path: '/admin/certificate-signer-assignments',
+        ),
+        data: assignments,
+      ),
+    );
+    when(
+      () => dio.put<dynamic>(
+        '/admin/certificate-signer-assignments',
+        data: any(named: 'data'),
+      ),
+    ).thenAnswer((call) async {
+      final payload = Map<String, dynamic>.from(
+        call.namedArguments[#data] as Map,
+      );
+      signerPayloads.add(payload);
+      final assignment = {
+        ...payload,
+        'id': 'synthetic-assignment',
+        'admin_id': payload['admin_id'],
+        'assigned_by_id': 'synthetic-app-admin',
+        'active': true,
+        'created_at': '2026-11-21T12:00:00Z',
+      };
+      assignments = [
+        ...assignments.where(
+          (row) =>
+              (row as Map)['program'] != payload['program'] ||
+              row['campus'] != payload['campus'],
+        ),
+        assignment,
+      ];
+      return Response(
+        requestOptions: RequestOptions(
+          path: '/admin/certificate-signer-assignments',
+        ),
+        data: assignment,
+      );
     });
     when(
       () => dio.post<dynamic>('/admin/admins', data: any(named: 'data')),
@@ -229,6 +275,57 @@ void main() {
     GoogleFonts.config.allowRuntimeFetching = true;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMessageHandler('flutter/assets', null);
+  });
+
+  testWidgets('app admin can designate a scoped certificate signer', (t) async {
+    final api = _Api();
+    await _mount(t, api, GlobalKey());
+    api.loaded();
+    await _paint(t);
+
+    final button = find.byTooltip('Hacer responsable de certificados');
+    await t.ensureVisible(button);
+    await t.tap(button);
+    await t.pumpAndSettle();
+    expect(find.textContaining('firmar los certificados de Medicina · Bogotá'), findsOneWidget);
+
+    await t.tap(find.widgetWithText(FilledButton, 'Designar responsable'));
+    await t.pumpAndSettle();
+
+    expect(api.signerPayloads, [
+      {'program': 'Medicina', 'campus': 'Bogotá', 'admin_id': 'synthetic-admin'},
+    ]);
+    expect(find.byTooltip('Responsable de certificados'), findsOneWidget);
+    expect(t.takeException(), isNull);
+  });
+
+  testWidgets('replacement of a certificate signer requires confirmation', (t) async {
+    final api = _Api()
+      ..assignments = [
+        {
+          'id': 'previous-assignment',
+          'program': 'Medicina',
+          'campus': 'Bogotá',
+          'admin_id': 'previous-admin',
+          'assigned_by_id': 'synthetic-app-admin',
+          'active': true,
+          'created_at': '2026-11-20T12:00:00Z',
+        },
+      ];
+    await _mount(t, api, GlobalKey());
+    api.loaded();
+    await _paint(t);
+
+    await t.tap(find.byTooltip('Hacer responsable de certificados'));
+    await t.pumpAndSettle();
+    expect(
+      find.textContaining('Ya hay un responsable para Medicina · Bogotá'),
+      findsOneWidget,
+    );
+    await t.tap(find.text('Cancelar'));
+    await t.pumpAndSettle();
+    expect(api.signerPayloads, isEmpty);
+    expect(find.byTooltip('Hacer responsable de certificados'), findsOneWidget);
   });
 
   for (final status in [401, 403, 404, 429, 500, 503]) {

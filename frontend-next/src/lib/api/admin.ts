@@ -77,6 +77,35 @@ export interface CreateAdminRequest {
   campus: string;
 }
 
+export interface CertificateSignerAssignment {
+  id: string;
+  program: string;
+  campus: string;
+  admin_id: string;
+  assigned_by_id: string;
+  active: boolean;
+  created_at: string;
+}
+
+export async function listCertificateSignerAssignments(): Promise<CertificateSignerAssignment[]> {
+  const { data } = await apiClient.get<CertificateSignerAssignment[]>(
+    "/admin/certificate-signer-assignments",
+  );
+  return data;
+}
+
+export async function assignCertificateSigner(payload: {
+  program: string;
+  campus: string;
+  admin_id: string;
+}): Promise<CertificateSignerAssignment> {
+  const { data } = await apiClient.put<CertificateSignerAssignment>(
+    "/admin/certificate-signer-assignments",
+    payload,
+  );
+  return data;
+}
+
 export interface VaccineCreateRequest {
   name: string;
   code: string;

@@ -3,14 +3,14 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterAll, afterEach, beforeEach, expect, it, vi } from "vitest";
 import Admins from "@/app/admin/admins/page";
-import { createAdmin, deleteAdmin, getAcademicOptions, listAdmins } from "@/lib/api/admin";
+import { assignCertificateSigner, createAdmin, deleteAdmin, getAcademicOptions, listAdmins, listCertificateSignerAssignments } from "@/lib/api/admin";
 import { createThread } from "@/lib/api/communications";
 import { useAuthStore } from "@/lib/auth/store";
 import type { User } from "@/lib/api/types";
 
 const navigation = vi.hoisted(() => ({ push: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => navigation }));
-vi.mock("@/lib/api/admin", () => ({ createAdmin: vi.fn(), deleteAdmin: vi.fn(), getAcademicOptions: vi.fn(), listAdmins: vi.fn() }));
+vi.mock("@/lib/api/admin", () => ({ assignCertificateSigner: vi.fn(), createAdmin: vi.fn(), deleteAdmin: vi.fn(), getAcademicOptions: vi.fn(), listAdmins: vi.fn(), listCertificateSignerAssignments: vi.fn() }));
 vi.mock("@/lib/api/communications", () => ({ createThread: vi.fn() }));
 
 const prototype = HTMLDialogElement.prototype;
@@ -46,6 +46,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   useAuthStore.setState({ userId: "synthetic-app-admin", role: "app_admin", isAuthenticated: true });
   vi.mocked(listAdmins).mockResolvedValue([admin]);
+  vi.mocked(listCertificateSignerAssignments).mockResolvedValue([]);
+  vi.mocked(assignCertificateSigner).mockImplementation(async payload => ({ ...payload, id: "synthetic-assignment", assigned_by_id: "synthetic-app-admin", active: true, created_at: "2026-11-21T12:00:00Z" }));
   vi.mocked(getAcademicOptions).mockResolvedValue({ programs: ["Medicina"], campuses: ["Bogotá"], semesters: Array.from({ length: 10 }, (_, i) => i + 1) });
   vi.mocked(createAdmin).mockResolvedValue(admin);
   vi.mocked(deleteAdmin).mockResolvedValue(undefined);

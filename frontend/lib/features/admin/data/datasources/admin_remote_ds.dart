@@ -31,6 +31,23 @@ class AdminRemoteDataSource {
     return r.data as List<dynamic>;
   }
 
+  Future<List<dynamic>> listCertificateSignerAssignments() async {
+    final r = await _api.dio.get('/admin/certificate-signer-assignments');
+    return r.data as List<dynamic>;
+  }
+
+  Future<Map<String, dynamic>> assignCertificateSigner({
+    required String program,
+    required String campus,
+    required String adminId,
+  }) async {
+    final r = await _api.dio.put(
+      '/admin/certificate-signer-assignments',
+      data: {'program': program, 'campus': campus, 'admin_id': adminId},
+    );
+    return Map<String, dynamic>.from(r.data as Map);
+  }
+
   Future<Map<String, dynamic>> createAdmin(Map<String, dynamic> data) async {
     final r = await _api.dio.post('/admin/admins', data: data);
     return r.data;

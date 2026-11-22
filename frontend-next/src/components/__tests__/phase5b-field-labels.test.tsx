@@ -12,7 +12,9 @@ import { useAuthStore } from '@/lib/auth/store';
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), replace: vi.fn() }), useSearchParams: () => new URLSearchParams('tab=info'), usePathname: () => '/admin/students' }));
 vi.mock('@/lib/api/admin', () => ({
   listStudents: vi.fn(async () => ({ page: 1, page_size: 20, total: 0, total_pages: 0, has_next: false, has_previous: false, items: [] })),
+  assignCertificateSigner: vi.fn(),
   listAdmins: vi.fn(async () => []),
+  listCertificateSignerAssignments: vi.fn(async () => []),
   getAcademicOptions: vi.fn(async () => ({ programs: ['Medicina', 'Enfermería'], campuses: ['Bogotá', 'Cali'], semesters: Array.from({ length: 10 }, (_, i) => i + 1) })),
   getStudent: vi.fn(async () => ({ id: 'synthetic', email: 'synthetic@example.invalid', role: 'student', is_active: true, profile: null, created_at: '2026-10-09T12:00:00Z' })),
   listStudentCertificates: vi.fn(async () => []),

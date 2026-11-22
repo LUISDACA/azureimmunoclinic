@@ -7,10 +7,12 @@ import { useId, useState } from "react";
 import { toast } from "sonner";
 import {
   CreateAdminRequest,
+  assignCertificateSigner,
   createAdmin,
   deleteAdmin,
   getAcademicOptions,
   listAdmins,
+  listCertificateSignerAssignments,
 } from "@/lib/api/admin";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -41,6 +43,10 @@ export default function AdminManagementPage() {
   const { data, isLoading, isFetching, error, refetch } = useQuery({
     queryKey: ["admins"],
     queryFn: listAdmins,
+  });
+  const signerAssignments = useQuery({
+    queryKey: ["certificate-signer-assignments"],
+    queryFn: listCertificateSignerAssignments,
   });
 
   const [showForm, setShowForm] = useState(false);
@@ -105,6 +111,21 @@ export default function AdminManagementPage() {
     },
     onError: () => { setWriteError("No se pudo eliminar el administrador."); toast.error("No se pudo eliminar"); },
   });
+  const assignSigner = useMutation({
+    affectedQueries: [["admins"], ["certificate-signer-assignments"], ["audit"]],
+    mutationFn: assignCertificateSigner,
+    onMutate: beginWrite,
+    onSuccess: (_assignment, payload) => {
+      notifyWrite(
+        `${payload.program} · ${payload.campus}: responsable de certificados actualizado.`,
+        "La asignación se guardó, pero no se pudo actualizar la lista. Pulsa Actualizar lista.",
+      );
+    },
+    onError: () => {
+      setWriteError("No se pudo asignar al responsable de certificados.");
+      toast.error("No se pudo asignar el responsable");
+    },
+  });
   const sendMessage = useMutation({
     affectedQueries: [["threads"], ["notifications"]],
     mutationFn: createThread,
@@ -114,7 +135,7 @@ export default function AdminManagementPage() {
       router.push(`/admin/communications/${encodeURIComponent(thread.id)}?returnTo=${encodeURIComponent("/admin/admins")}`);
     },
   });
-  const busy = isFetching || create.isPending || remove.isPending || sendMessage.isPending;
+  const busy = isFetching || signerAssignments.isFetching || create.isPending || remove.isPending || assignSigner.isPending || sendMessage.isPending;
   const readable = !error && !isLoading && data !== undefined;
 
   return (
@@ -123,7 +144,7 @@ export default function AdminManagementPage() {
         <div className="min-w-0">
           <h1 className="text-2xl font-bold tracking-tight">Administradores</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Cuentas con permisos de administración por programa y sede.
+            Cuentas con permisos de administración por programa y sede. Designa aquí quién firma los certificados de cada ámbito.
           </p>
         </div>
         {readable && (
@@ -138,6 +159,13 @@ export default function AdminManagementPage() {
 
       {error && confirmedMessage && <p role="status">{confirmedMessage}</p>}
       {writeError && <p role="status">{writeError}</p>}
+      {readable && signerAssignments.error && (
+        <QueryError
+          error={signerAssignments.error}
+          retry={() => signerAssignments.refetch({ cancelRefetch: false })}
+          retrying={signerAssignments.isFetching}
+        />
+      )}
       {showForm && readable && (
         <Card>
           <CardHeader>
@@ -257,6 +285,40 @@ export default function AdminManagementPage() {
                           </Badge>
                         </td>
                         <td className="px-3 py-2 text-right">
+                          {signerAssignments.data?.some((assignment) =>
+                            assignment.active && assignment.program === a.profile?.program &&
+                            assignment.campus === a.profile?.campus && assignment.admin_id === a.id
+                          ) ? (
+                            <Badge variant="success" className="mr-1">Responsable</Badge>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={busy || !signerAssignments.data || !a.is_active || !a.profile?.program || !a.profile?.campus}
+                              onClick={() => {
+                                if (!a.profile?.program || !a.profile.campus || !signerAssignments.data) return;
+                                const current = signerAssignments.data.find((assignment) =>
+                                  assignment.active && assignment.program === a.profile?.program &&
+                                  assignment.campus === a.profile?.campus
+                                );
+                                const name = a.profile
+                                  ? `${a.profile.first_name} ${a.profile.last_name}`.trim()
+                                  : a.email;
+                                const replacing = current && current.admin_id !== a.id;
+                                const prompt = replacing
+                                  ? `¿Reemplazar al responsable actual de ${a.profile.program} · ${a.profile.campus} y designar a ${name}?`
+                                  : `¿Designar a ${name} como responsable de certificados para ${a.profile.program} · ${a.profile.campus}?`;
+                                if (!confirm(prompt)) return;
+                                assignSigner.mutate({
+                                  program: a.profile.program,
+                                  campus: a.profile.campus,
+                                  admin_id: a.id,
+                                });
+                              }}
+                            >
+                              Hacer responsable
+                            </Button>
+                          )}
                           <Button
                             size="sm"
                             variant="ghost"
